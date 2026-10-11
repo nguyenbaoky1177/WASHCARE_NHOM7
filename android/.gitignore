@@ -1,0 +1,11 @@
+# Android Gradle
+/.gradle
+/captures/
+/local.properties
+GeneratedPluginRegistrant.java
+.cxx/
+
+# Android signing keys
+key.properties
+**/*.keystore
+**/*.jks
