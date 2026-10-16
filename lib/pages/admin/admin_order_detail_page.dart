@@ -108,19 +108,90 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     setState(() => _updating = true);
 
     try {
-      await supabase
-          .from('orders')
-          .update({'status': newStatus})
-          .eq('id', _order.id);
+      var rpcSuccess = false;
+      try {
+        await supabase.rpc('admin_update_order_status', params: {
+          'p_order_id': _order.id,
+          'p_new_status': newStatus,
+          'p_note': actionName,
+        });
+        rpcSuccess = true;
+      } catch (_) {
+        // Fallback to direct update
+      }
+
+      if (!rpcSuccess) {
+        await supabase
+            .from('orders')
+            .update({'status': newStatus})
+            .eq('id', _order.id);
+      }
 
       if (!mounted) return;
 
       _showMessage('Đã chuyển đơn sang: $actionName');
       await _reloadOrder();
     } catch (e) {
-      _showMessage('Cập nhật thất bại: $e');
+      final errStr = e.toString().toLowerCase();
+      if (errStr.contains('admin') || errStr.contains('permission') || errStr.contains('42501')) {
+        _showMessage('Lỗi: Bạn cần được cấp role="admin" trong bảng profiles để cập nhật đơn.');
+      } else {
+        _showMessage('Cập nhật thất bại: $e');
+      }
     } finally {
       if (mounted) setState(() => _updating = false);
+    }
+  }
+
+  Future<void> _manualChangeStatus() async {
+    const statusOptions = [
+      ('pending', 'Chờ xác nhận (pending)', Color(0xFFED8B00)),
+      ('confirmed', 'Đã tiếp nhận (confirmed)', primaryBlue),
+      ('processing', 'Đang giặt sấy (processing)', Color(0xFF7952B3)),
+      ('completed', 'Hoàn thành & Giao đồ (completed)', Color(0xFF16845B)),
+      ('cancelled', 'Đã hủy / Từ chối (cancelled)', Color(0xFFD64545)),
+    ];
+
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: const Text('Chọn trạng thái cập nhật', style: TextStyle(fontWeight: FontWeight.bold)),
+        children: statusOptions.map((opt) {
+          final isCurrent = _order.status == opt.$1;
+          return SimpleDialogOption(
+            onPressed: () => Navigator.pop(ctx, opt.$1),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 6),
+              child: Row(
+                children: [
+                  Container(
+                    width: 10,
+                    height: 10,
+                    decoration: BoxDecoration(shape: BoxShape.circle, color: opt.$3),
+                  ),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      opt.$2,
+                      style: TextStyle(
+                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                        color: isCurrent ? opt.$3 : Colors.black87,
+                      ),
+                    ),
+                  ),
+                  if (isCurrent)
+                    const Icon(Icons.check, size: 18, color: Colors.green),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ),
+    );
+
+    if (selected != null && selected != _order.status && mounted) {
+      final label = statusOptions.firstWhere((e) => e.$1 == selected).$2;
+      await _updateStatus(selected, label);
     }
   }
 
@@ -330,6 +401,17 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         ),
                       ),
                     ],
+                    const SizedBox(height: 10),
+                    Center(
+                      child: TextButton.icon(
+                        onPressed: _manualChangeStatus,
+                        icon: const Icon(Icons.swap_horiz, size: 18),
+                        label: const Text(
+                          'Đổi trạng thái tùy chọn...',
+                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                        ),
+                      ),
+                    ),
                   ],
                 ],
               ),

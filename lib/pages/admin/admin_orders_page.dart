@@ -151,20 +151,46 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
 
   Future<void> _quickUpdateStatus(OrderModel order, String newStatus, String label) async {
     try {
-      await supabase
-          .from('orders')
-          .update({'status': newStatus})
-          .eq('id', order.id);
+      var rpcSuccess = false;
+      try {
+        await supabase.rpc('admin_update_order_status', params: {
+          'p_order_id': order.id,
+          'p_new_status': newStatus,
+          'p_note': label,
+        });
+        rpcSuccess = true;
+      } catch (_) {
+        // Fallback to direct update if RPC fails
+      }
+
+      if (!rpcSuccess) {
+        await supabase
+            .from('orders')
+            .update({'status': newStatus})
+            .eq('id', order.id);
+      }
 
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Đơn #${order.id} ➔ $label')),
+        SnackBar(
+          content: Text('Đơn #${order.id} ➔ $label'),
+          backgroundColor: const Color(0xFF16845B),
+        ),
       );
       _refresh();
     } catch (e) {
       if (!mounted) return;
+      final errStr = e.toString().toLowerCase();
+      String msg = 'Lỗi cập nhật: $e';
+      if (errStr.contains('admin') || errStr.contains('permission') || errStr.contains('42501')) {
+        msg = 'Lỗi: Tài khoản của bạn chưa được cấp role="admin" trong bảng profiles của Supabase.';
+      }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Lỗi cập nhật: $e')),
+        SnackBar(
+          content: Text(msg),
+          backgroundColor: Colors.red[800],
+          duration: const Duration(seconds: 5),
+        ),
       );
     }
   }
