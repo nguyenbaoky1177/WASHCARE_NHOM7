@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
@@ -15,6 +16,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   late Future<List<OrderModel>> _ordersFuture;
   String _selectedFilter = 'all';
   final Set<String> _cancellingOrders = {};
+  RealtimeChannel? _ordersChannel;
 
   static const Color _primary = primaryBlue;
   static const Color _background = Color(0xFFF4F7FB);
@@ -23,6 +25,92 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   void initState() {
     super.initState();
     _ordersFuture = _loadOrders();
+    _setupRealtimeSubscription();
+  }
+
+  @override
+  void dispose() {
+    if (_ordersChannel != null) {
+      supabase.removeChannel(_ordersChannel!);
+    }
+    super.dispose();
+  }
+
+  void _setupRealtimeSubscription() {
+    final user = supabase.auth.currentUser;
+    if (user == null) return;
+
+    final channelName =
+        'realtime_orders_${user.id}_${DateTime.now().millisecondsSinceEpoch}';
+    _ordersChannel = supabase.channel(channelName);
+
+    _ordersChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'user_id',
+            value: user.id,
+          ),
+          callback: (payload) {
+            if (!mounted) return;
+
+            final eventType = payload.eventType;
+            final newRecord = payload.newRecord;
+
+            if (eventType == PostgresChangeEvent.update && newRecord.isNotEmpty) {
+              final newStatus = newRecord['status']?.toString() ?? '';
+              final orderId = newRecord['id']?.toString() ?? '';
+
+              String statusName = newStatus;
+              switch (newStatus) {
+                case 'pending':
+                  statusName = 'Chờ xác nhận';
+                  break;
+                case 'confirmed':
+                  statusName = 'Đã xác nhận';
+                  break;
+                case 'processing':
+                  statusName = 'Đang xử lý';
+                  break;
+                case 'completed':
+                  statusName = 'Hoàn thành';
+                  break;
+                case 'cancelled':
+                  statusName = 'Đã hủy';
+                  break;
+              }
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Row(
+                    children: [
+                      const Icon(
+                        Icons.notifications_active,
+                        color: Colors.white,
+                        size: 20,
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Đơn hàng #$orderId vừa cập nhật: $statusName',
+                          style: const TextStyle(fontWeight: FontWeight.w500),
+                        ),
+                      ),
+                    ],
+                  ),
+                  duration: const Duration(seconds: 4),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+
+            _refreshOrders();
+          },
+        )
+        .subscribe();
   }
 
   Future<List<OrderModel>> _loadOrders() async {
@@ -499,9 +587,40 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     return Scaffold(
       backgroundColor: _background,
       appBar: AppBar(
-        title: const Text(
-          'Đơn hàng',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Row(
+          children: [
+            const Text(
+              'Đơn hàng',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(width: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.fiber_manual_record,
+                    color: Colors.greenAccent,
+                    size: 9,
+                  ),
+                  SizedBox(width: 4),
+                  Text(
+                    'Realtime',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 11,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ),
         backgroundColor: _primary,
         foregroundColor: Colors.white,
@@ -566,7 +685,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                     const Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'Theo dõi đơn giặt ủi của bạn',
+                        'Theo dõi đơn giặt ủi của bạn (cập nhật trực tiếp)',
                         style: TextStyle(
                           fontSize: 14,
                           color: Colors.black54,
@@ -600,7 +719,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   }
 }
 
-class OrderDetailPage extends StatelessWidget {
+class OrderDetailPage extends StatefulWidget {
   final OrderModel order;
   final Future<void> Function() onCancel;
 
@@ -610,7 +729,218 @@ class OrderDetailPage extends StatelessWidget {
     required this.onCancel,
   });
 
+  @override
+  State<OrderDetailPage> createState() => _OrderDetailPageState();
+}
+
+class _OrderDetailPageState extends State<OrderDetailPage> {
+  late OrderModel _order;
+  RealtimeChannel? _detailChannel;
+
   static const Color _primary = primaryBlue;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.order;
+    _setupOrderRealtime();
+  }
+
+  @override
+  void dispose() {
+    if (_detailChannel != null) {
+      supabase.removeChannel(_detailChannel!);
+    }
+    super.dispose();
+  }
+
+  void _setupOrderRealtime() {
+    final channelName =
+        'realtime_detail_${_order.id}_${DateTime.now().millisecondsSinceEpoch}';
+    _detailChannel = supabase.channel(channelName);
+
+    _detailChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: _order.id,
+          ),
+          callback: (_) async {
+            if (!mounted) return;
+
+            final refreshed = await supabase
+                .from('orders')
+                .select('*, order_items(*, services(name, unit))')
+                .eq('id', _order.id)
+                .maybeSingle();
+
+            if (refreshed != null && mounted) {
+              final newOrder = OrderModel.fromJson(refreshed);
+              setState(() {
+                _order = newOrder;
+              });
+
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    'Trạng thái đơn hàng vừa cập nhật: ${newOrder.statusDisplayName}',
+                  ),
+                  duration: const Duration(seconds: 3),
+                  behavior: SnackBarBehavior.floating,
+                ),
+              );
+            }
+          },
+        )
+        .subscribe();
+  }
+
+  int _currentStepIndex(String status) {
+    switch (status) {
+      case 'pending':
+        return 0;
+      case 'confirmed':
+        return 1;
+      case 'processing':
+        return 2;
+      case 'completed':
+        return 3;
+      default:
+        return 0;
+    }
+  }
+
+  Widget _buildStatusStepper(String status) {
+    if (status == 'cancelled') {
+      return Container(
+        margin: const EdgeInsets.only(bottom: 16),
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFDEDED),
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: const Color(0xFFF5C2C2)),
+        ),
+        child: const Row(
+          children: [
+            Icon(Icons.cancel, color: Color(0xFFD64545), size: 28),
+            SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Đơn hàng đã hủy',
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFFD64545),
+                      fontSize: 15,
+                    ),
+                  ),
+                  SizedBox(height: 3),
+                  Text(
+                    'Đơn hàng này đã bị hủy và không còn được xử lý.',
+                    style: TextStyle(color: Colors.black54, fontSize: 13),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final currentIndex = _currentStepIndex(status);
+
+    const steps = [
+      ('Chờ duyệt', Icons.receipt_long),
+      ('Tiếp nhận', Icons.check_circle_outline),
+      ('Đang giặt', Icons.local_laundry_service),
+      ('Hoàn thành', Icons.task_alt),
+    ];
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: const Color(0xFFE4ECF5)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'TIẾN TRÌNH XỬ LÝ ĐƠN HÀNG',
+            style: TextStyle(
+              color: Colors.black54,
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 18),
+          Row(
+            children: List.generate(steps.length * 2 - 1, (i) {
+              if (i.isOdd) {
+                final stepIndex = i ~/ 2;
+                final isDone = stepIndex < currentIndex;
+                return Expanded(
+                  child: Container(
+                    height: 3,
+                    color: isDone ? _primary : const Color(0xFFE2E8F0),
+                  ),
+                );
+              }
+
+              final stepIndex = i ~/ 2;
+              final isPassed = stepIndex <= currentIndex;
+              final isCurrent = stepIndex == currentIndex;
+
+              final (stepTitle, stepIcon) = steps[stepIndex];
+
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 38,
+                    height: 38,
+                    decoration: BoxDecoration(
+                      color: isPassed ? _primary : const Color(0xFFF1F5F9),
+                      shape: BoxShape.circle,
+                      border: isCurrent
+                          ? Border.all(color: _primary.withValues(alpha: 0.4), width: 4)
+                          : null,
+                    ),
+                    child: Icon(
+                      stepIcon,
+                      size: 18,
+                      color: isPassed ? Colors.white : Colors.blueGrey,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  Text(
+                    stepTitle,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight:
+                          isCurrent ? FontWeight.bold : FontWeight.w500,
+                      color: isCurrent
+                          ? _primary
+                          : (isPassed ? Colors.black87 : Colors.black45),
+                    ),
+                  ),
+                ],
+              );
+            }),
+          ),
+        ],
+      ),
+    );
+  }
 
   Widget _detailRow(String title, String value) {
     return Padding(
@@ -642,13 +972,41 @@ class OrderDetailPage extends StatelessWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
       appBar: AppBar(
-        title: Text('Chi tiết đơn #${order.id}'),
+        title: Row(
+          children: [
+            Text('Chi tiết đơn #${_order.id}'),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 7, vertical: 3),
+              decoration: BoxDecoration(
+                color: Colors.white.withValues(alpha: 0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    Icons.fiber_manual_record,
+                    color: Colors.greenAccent,
+                    size: 8,
+                  ),
+                  SizedBox(width: 3),
+                  Text(
+                    'Live',
+                    style: TextStyle(color: Colors.white, fontSize: 10),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
         backgroundColor: _primary,
         foregroundColor: Colors.white,
       ),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
+          _buildStatusStepper(_order.status),
           Card(
             color: Colors.white,
             elevation: 0,
@@ -676,39 +1034,50 @@ class OrderDetailPage extends StatelessWidget {
                       vertical: 9,
                     ),
                     decoration: BoxDecoration(
-                      color: order.statusColor.withValues(alpha: 0.10),
+                      color: _order.statusColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(22),
                     ),
-                    child: Text(
-                      order.statusDisplayName,
-                      style: TextStyle(
-                        color: order.statusColor,
-                        fontWeight: FontWeight.bold,
-                      ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          _order.statusIcon,
+                          color: _order.statusColor,
+                          size: 16,
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          _order.statusDisplayName,
+                          style: TextStyle(
+                            color: _order.statusColor,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                   const Divider(height: 32),
-                  _detailRow('Mã đơn', '#${order.id}'),
-                  _detailRow('Ngày đặt', order.formattedCreatedAt),
-                  _detailRow('Thời gian nhận', order.formattedPickupTime),
+                  _detailRow('Mã đơn', '#${_order.id}'),
+                  _detailRow('Ngày đặt', _order.formattedCreatedAt),
+                  _detailRow('Thời gian nhận', _order.formattedPickupTime),
                   _detailRow(
                     'Người nhận',
-                    order.customerName.isNotEmpty
-                        ? order.customerName
+                    _order.customerName.isNotEmpty
+                        ? _order.customerName
                         : 'Chưa có tên',
                   ),
                   _detailRow(
                     'Số điện thoại',
-                    order.phone.isNotEmpty ? order.phone : 'Chưa có số',
+                    _order.phone.isNotEmpty ? _order.phone : 'Chưa có số',
                   ),
                   _detailRow(
                     'Địa chỉ',
-                    order.address.isNotEmpty
-                        ? order.address
+                    _order.address.isNotEmpty
+                        ? _order.address
                         : 'Chưa có địa chỉ',
                   ),
-                  if ((order.note ?? '').isNotEmpty)
-                    _detailRow('Ghi chú', order.note!),
+                  if ((_order.note ?? '').isNotEmpty)
+                    _detailRow('Ghi chú', _order.note!),
                 ],
               ),
             ),
@@ -735,10 +1104,10 @@ class OrderDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (order.items.isEmpty)
+                  if (_order.items.isEmpty)
                     const Text('Chưa có thông tin dịch vụ.')
                   else
-                    ...order.items.map((item) {
+                    ..._order.items.map((item) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 9),
                         child: Row(
@@ -783,7 +1152,7 @@ class OrderDetailPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        order.formattedTotalPrice,
+                        _order.formattedTotalPrice,
                         style: const TextStyle(
                           color: _primary,
                           fontSize: 20,
@@ -796,7 +1165,7 @@ class OrderDetailPage extends StatelessWidget {
               ),
             ),
           ),
-          if (order.isPending) ...[
+          if (_order.isPending) ...[
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -806,7 +1175,7 @@ class OrderDetailPage extends StatelessWidget {
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () async {
-                  await onCancel();
+                  await widget.onCancel();
                   if (context.mounted) {
                     Navigator.pop(context);
                   }
