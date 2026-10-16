@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
+import '../core/vietqr_helper.dart';
 import '../models/models.dart';
 
 class OrderPage extends StatefulWidget {
@@ -30,6 +32,7 @@ class _OrderPageState extends State<OrderPage> {
 
   double _discountAmount = 0.0;
   String? _appliedVoucher;
+  String _savedAddress = '';
 
   bool _loading = true;
   bool _submitting = false;
@@ -69,6 +72,13 @@ class _OrderPageState extends State<OrderPage> {
           _nameController.text = profile.fullName;
           _phoneController.text = profile.phone ?? '';
         }
+      }
+
+      // Load saved address from local storage
+      final prefs = await SharedPreferences.getInstance();
+      _savedAddress = prefs.getString('washcare_saved_address') ?? '';
+      if (_savedAddress.isNotEmpty && _addressController.text.isEmpty) {
+        _addressController.text = _savedAddress;
       }
 
       final result = await supabase
@@ -237,46 +247,109 @@ class _OrderPageState extends State<OrderPage> {
         },
       );
 
+      // Save address for next time
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setString('washcare_saved_address', _addressController.text.trim());
+      } catch (_) {}
+
       if (!mounted) return;
 
-      await showDialog<void>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-          icon: const Icon(Icons.check_circle, color: Colors.green, size: 54),
-          title: const Text('Đặt dịch vụ thành công!', style: TextStyle(fontWeight: FontWeight.bold)),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                'Mã đơn hàng: #$orderId',
-                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Tổng tiền: ${_formatMoney(_finalTotal)} đ',
-                style: const TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 18),
-              ),
-              const SizedBox(height: 12),
-              Text(
-                _paymentMethod == 'cod'
-                    ? 'Bạn sẽ thanh toán tiền mặt khi shipper giao đồ sạch.'
-                    : 'Nhân viên sẽ cung cấp mã QR chuyển khoản khi nhận đồ.',
-                textAlign: TextAlign.center,
-                style: const TextStyle(color: Colors.black54, fontSize: 13),
+      if (_paymentMethod == 'vietqr') {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogCtx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 54),
+            title: const Text('Đặt dịch vụ thành công!', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Mã đơn hàng: #$orderId',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tổng tiền: ${_formatMoney(_finalTotal)} đ',
+                  style: const TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bạn đã chọn thanh toán qua VietQR. Hãy quét mã chuyển khoản để tiệm ưu tiên xử lý sớm nhé!',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+                const SizedBox(height: 16),
+                SizedBox(
+                  width: double.infinity,
+                  child: FilledButton.icon(
+                    style: FilledButton.styleFrom(
+                      backgroundColor: primaryBlue,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                    ),
+                    onPressed: () async {
+                      Navigator.pop(dialogCtx);
+                      await VietQrHelper.showPaymentDialog(
+                        context: context,
+                        orderId: orderId,
+                        amount: _finalTotal,
+                      );
+                    },
+                    icon: const Icon(Icons.qr_code_2),
+                    label: const Text('Mở mã VietQR chuyển tiền ngay', style: TextStyle(fontWeight: FontWeight.bold)),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Để sau & Theo dõi đơn'),
               ),
             ],
           ),
-          actions: [
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: primaryBlue),
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Hoàn tất & Theo dõi'),
+        );
+      } else {
+        await showDialog<void>(
+          context: context,
+          barrierDismissible: false,
+          builder: (dialogCtx) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            icon: const Icon(Icons.check_circle, color: Colors.green, size: 54),
+            title: const Text('Đặt dịch vụ thành công!', style: TextStyle(fontWeight: FontWeight.bold)),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Mã đơn hàng: #$orderId',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tổng tiền: ${_formatMoney(_finalTotal)} đ',
+                  style: const TextStyle(color: primaryBlue, fontWeight: FontWeight.bold, fontSize: 18),
+                ),
+                const SizedBox(height: 12),
+                const Text(
+                  'Bạn sẽ thanh toán tiền mặt khi shipper giao đồ sạch.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                ),
+              ],
             ),
-          ],
-        ),
-      );
+            actions: [
+              FilledButton(
+                style: FilledButton.styleFrom(backgroundColor: primaryBlue),
+                onPressed: () => Navigator.pop(dialogCtx),
+                child: const Text('Hoàn tất & Theo dõi'),
+              ),
+            ],
+          ),
+        );
+      }
 
       if (mounted) Navigator.pop(context, true);
     } on PostgrestException catch (e) {
@@ -646,6 +719,27 @@ class _OrderPageState extends State<OrderPage> {
             ),
             validator: (v) => v == null || v.trim().isEmpty ? 'Nhập địa chỉ nhận đồ' : null,
           ),
+          if (_savedAddress.isNotEmpty) ...[
+            const SizedBox(height: 6),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: ActionChip(
+                avatar: const Icon(Icons.history, size: 14, color: primaryBlue),
+                label: Text(
+                  'Địa chỉ gần nhất: ${_savedAddress.length > 30 ? '${_savedAddress.substring(0, 30)}...' : _savedAddress}',
+                  style: const TextStyle(fontSize: 11, color: primaryBlue, fontWeight: FontWeight.w600),
+                ),
+                backgroundColor: paleBlue,
+                side: BorderSide.none,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                onPressed: () {
+                  setState(() {
+                    _addressController.text = _savedAddress;
+                  });
+                },
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           TextFormField(
             controller: _noteController,

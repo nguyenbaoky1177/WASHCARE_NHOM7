@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/app_colors.dart';
 import '../../core/supabase_client.dart';
+import '../../core/vietqr_helper.dart';
 import '../../models/models.dart';
 
 class AdminOrderDetailPage extends StatefulWidget {
@@ -542,6 +543,27 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         ),
                       ),
                     ],
+                  ),
+                  const SizedBox(height: 16),
+                  SizedBox(
+                    width: double.infinity,
+                    child: OutlinedButton.icon(
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: primaryBlue,
+                        side: const BorderSide(color: primaryBlue),
+                        padding: const EdgeInsets.symmetric(vertical: 12),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                      ),
+                      onPressed: () {
+                        VietQrHelper.showPaymentDialog(
+                          context: context,
+                          orderId: _order.id,
+                          amount: _order.totalPrice,
+                        );
+                      },
+                      icon: const Icon(Icons.qr_code_2),
+                      label: const Text('Mở mã VietQR thu tiền của khách', style: TextStyle(fontWeight: FontWeight.bold)),
+                    ),
                   ),
                 ],
               ),

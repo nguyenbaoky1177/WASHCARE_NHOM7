@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
+import '../core/vietqr_helper.dart';
 import '../models/models.dart';
 
 class ActiveOrdersPage extends StatefulWidget {
@@ -1163,6 +1164,59 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   ),
                 ],
               ),
+            ),
+          ),
+          const SizedBox(height: 14),
+          Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: const Color(0xFFE4ECF5)),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: paleBlue,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(Icons.qr_code_2, color: primaryBlue, size: 28),
+                ),
+                const SizedBox(width: 14),
+                const Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Chuyển khoản VietQR',
+                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: darkBlue),
+                      ),
+                      SizedBox(height: 3),
+                      Text(
+                        'Quét mã để tự động điền tiền & nội dung',
+                        style: TextStyle(fontSize: 12, color: Colors.black54),
+                      ),
+                    ],
+                  ),
+                ),
+                FilledButton(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: primaryBlue,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  onPressed: () {
+                    VietQrHelper.showPaymentDialog(
+                      context: context,
+                      orderId: _order.id,
+                      amount: _order.totalPrice,
+                    );
+                  },
+                  child: const Text('Xem mã QR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                ),
+              ],
             ),
           ),
           if (_order.isPending) ...[
