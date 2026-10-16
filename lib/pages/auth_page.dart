@@ -69,6 +69,9 @@ class _AuthPageState extends State<AuthPage> {
         if (response.session != null) {
           _showMessage('Đăng ký thành công!');
         } else {
+          setState(() {
+            _isRegister = false;
+          });
           _showMessage(
             'Đăng ký thành công. Nếu được yêu cầu, '
                 'hãy xác nhận email trước khi đăng nhập.',
@@ -218,10 +221,13 @@ class _AuthPageState extends State<AuthPage> {
                           prefixIcon: Icon(Icons.phone_outlined),
                         ),
                         validator: (value) {
-                          if (_isRegister &&
-                              (value == null ||
-                                  value.trim().isEmpty)) {
+                          if (!_isRegister) return null;
+                          if (value == null || value.trim().isEmpty) {
                             return 'Vui lòng nhập số điện thoại';
+                          }
+                          final clean = value.trim();
+                          if (!RegExp(r'^(0[1-9][0-9]{8,9})$').hasMatch(clean)) {
+                            return 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)';
                           }
                           return null;
                         },

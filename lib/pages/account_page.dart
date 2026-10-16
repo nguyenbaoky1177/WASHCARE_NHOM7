@@ -116,6 +116,14 @@ labelText: 'Số điện thoại',
 prefixIcon: Icon(Icons.phone_outlined),
 border: OutlineInputBorder(),
 ),
+validator: (value) {
+if (value != null && value.trim().isNotEmpty) {
+  if (!RegExp(r'^(0[1-9][0-9]{8,9})$').hasMatch(value.trim())) {
+    return 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)';
+  }
+}
+return null;
+},
 ),
 ],
 ),
@@ -153,10 +161,11 @@ if (user == null) throw Exception('Bạn chưa đăng nhập.');
 final name = nameController.text.trim();
 final phone = phoneController.text.trim();
 
-await supabase.from('profiles').update({
+await supabase.from('profiles').upsert({
+'id': user.id,
 'full_name': name,
 'phone': phone.isEmpty ? null : phone,
-}).eq('id', user.id);
+});
 
 if (!mounted) return;
 

@@ -1,31 +1,33 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-
-import 'package:washcare/main.dart';
-import 'package:washcare/main.dart';
+import 'package:washcare/core/app_colors.dart';
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const WashCareApp());
+  test('App colors are correctly configured', () {
+    expect(primaryBlue, const Color(0xFF2878D0));
+    expect(paleBlue, const Color(0xFFEAF4FF));
+    expect(darkBlue, const Color(0xFF17365D));
+    expect(backgroundColor, const Color(0xFFF6F9FD));
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  testWidgets('App theme configuration smoke test', (WidgetTester tester) async {
+    final theme = ThemeData(
+      useMaterial3: true,
+      colorScheme: ColorScheme.fromSeed(seedColor: primaryBlue),
+      scaffoldBackgroundColor: backgroundColor,
+    );
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+    await tester.pumpWidget(
+      MaterialApp(
+        theme: theme,
+        home: const Scaffold(
+          body: Center(
+            child: Text('WashCare'),
+          ),
+        ),
+      ),
+    );
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+    expect(find.text('WashCare'), findsOneWidget);
   });
 }

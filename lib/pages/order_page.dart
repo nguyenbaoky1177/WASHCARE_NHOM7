@@ -1,11 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-
-const Color _blue = Color(0xFF2878D0);
-const Color _darkBlue = Color(0xFF17365D);
-
-final _supabase = Supabase.instance.client;
+import '../core/app_colors.dart';
+import '../core/supabase_client.dart';
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -46,10 +43,10 @@ class _OrderPageState extends State<OrderPage> {
 
   Future<void> _loadData() async {
     try {
-      final user = _supabase.auth.currentUser;
+      final user = supabase.auth.currentUser;
 
       if (user != null) {
-        final profile = await _supabase
+        final profile = await supabase
             .from('profiles')
             .select('full_name, phone')
             .eq('id', user.id)
@@ -62,7 +59,7 @@ class _OrderPageState extends State<OrderPage> {
             profile?['phone']?.toString() ?? '';
       }
 
-      final result = await _supabase
+      final result = await supabase
           .from('services')
           .select('id, name, description, price, unit')
           .eq('is_active', true)
@@ -186,7 +183,7 @@ class _OrderPageState extends State<OrderPage> {
     setState(() => _submitting = true);
 
     try {
-      final orderId = await _supabase.rpc(
+      final orderId = await supabase.rpc(
         'create_order',
         params: {
           'p_customer_name': _nameController.text.trim(),
@@ -274,7 +271,7 @@ class _OrderPageState extends State<OrderPage> {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Đặt đơn giặt'),
-        backgroundColor: _blue,
+        backgroundColor: primaryBlue,
         foregroundColor: Colors.white,
       ),
       body: _loading
@@ -289,7 +286,7 @@ class _OrderPageState extends State<OrderPage> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: _darkBlue,
+                color: darkBlue,
               ),
             ),
             const SizedBox(height: 12),
@@ -329,7 +326,7 @@ class _OrderPageState extends State<OrderPage> {
                       Text(
                         '${_money(price)} đ / $unit',
                         style: const TextStyle(
-                          color: _blue,
+                          color: primaryBlue,
                           fontWeight: FontWeight.bold,
                         ),
                       ),
@@ -366,7 +363,7 @@ class _OrderPageState extends State<OrderPage> {
                             },
                             icon: const Icon(
                               Icons.add_circle_outline,
-                              color: _blue,
+                              color: primaryBlue,
                             ),
                           ),
                         ],
@@ -383,7 +380,7 @@ class _OrderPageState extends State<OrderPage> {
               style: TextStyle(
                 fontSize: 22,
                 fontWeight: FontWeight.bold,
-                color: _darkBlue,
+                color: darkBlue,
               ),
             ),
             const SizedBox(height: 14),
@@ -402,10 +399,16 @@ class _OrderPageState extends State<OrderPage> {
               label: 'Số điện thoại',
               icon: Icons.phone_outlined,
               keyboardType: TextInputType.phone,
-              validator: (v) =>
-              v == null || v.trim().isEmpty
-                  ? 'Vui lòng nhập số điện thoại'
-                  : null,
+              validator: (v) {
+                if (v == null || v.trim().isEmpty) {
+                  return 'Vui lòng nhập số điện thoại';
+                }
+                final clean = v.trim();
+                if (!RegExp(r'^(0[1-9][0-9]{8,9})$').hasMatch(clean)) {
+                  return 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)';
+                }
+                return null;
+              },
             ),
             _field(
               controller: _addressController,
@@ -451,7 +454,7 @@ class _OrderPageState extends State<OrderPage> {
                 children: [
                   const Text(
                     'Tổng tiền dự kiến',
-                    style: TextStyle(color: _darkBlue),
+                    style: TextStyle(color: darkBlue),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -459,7 +462,7 @@ class _OrderPageState extends State<OrderPage> {
                     style: const TextStyle(
                       fontSize: 26,
                       fontWeight: FontWeight.bold,
-                      color: _blue,
+                      color: primaryBlue,
                     ),
                   ),
                   const SizedBox(height: 6),
@@ -489,7 +492,7 @@ class _OrderPageState extends State<OrderPage> {
                   _submitting ? 'Đang đặt đơn...' : 'Đặt đơn',
                 ),
                 style: FilledButton.styleFrom(
-                  backgroundColor: _blue,
+                  backgroundColor: primaryBlue,
                 ),
               ),
             ),

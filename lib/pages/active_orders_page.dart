@@ -1,6 +1,8 @@
 
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
+import '../core/app_colors.dart';
+import '../core/supabase_client.dart';
 
 class ActiveOrdersPage extends StatefulWidget {
   const ActiveOrdersPage({super.key});
@@ -10,13 +12,11 @@ class ActiveOrdersPage extends StatefulWidget {
 }
 
 class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
-  final _supabase = Supabase.instance.client;
-
   late Future<List<Map<String, dynamic>>> _ordersFuture;
   String _selectedFilter = 'all';
   final Set<String> _cancellingOrders = {};
 
-  static const Color _primary = Color(0xFF1976D2);
+  static const Color _primary = primaryBlue;
   static const Color _background = Color(0xFFF4F7FB);
 
   @override
@@ -26,10 +26,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   }
 
   Future<List<Map<String, dynamic>>> _loadOrders() async {
-    final user = _supabase.auth.currentUser;
+    final user = supabase.auth.currentUser;
     if (user == null) return [];
 
-    final result = await _supabase
+    final result = await supabase
         .from('orders')
         .select('*, order_items(*, services(name, unit))')
         .eq('user_id', user.id)
@@ -175,7 +175,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Xác nhận hủy đơn'),
         content: Text(
-          'M có chắc muốn hủy đơn hàng #${order['id']} không? '
+          'Bạn có chắc muốn hủy đơn hàng #${order['id']} không? '
               'Thao tác này sẽ cập nhật trạng thái đơn.',
         ),
         actions: [
@@ -196,7 +196,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
 
     if (confirmed != true || !mounted) return;
 
-    final user = _supabase.auth.currentUser;
+    final user = supabase.auth.currentUser;
     if (user == null) {
       _showMessage('Phiên đăng nhập đã hết hạn.');
       return;
@@ -213,7 +213,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     var cancelledSuccessfully = false;
 
     try {
-      final updated = await _supabase
+      final updated = await supabase
           .from('orders')
           .update({'status': 'cancelled'})
           .eq('id', order['id'])
@@ -261,7 +261,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16),
         scrollDirection: Axis.horizontal,
         itemCount: filters.length,
-        separatorBuilder: (_, __) => const SizedBox(width: 8),
+        separatorBuilder: (_, _) => const SizedBox(width: 8),
         itemBuilder: (context, index) {
           final filter = filters[index];
           final selected = _selectedFilter == filter.$1;
@@ -697,7 +697,7 @@ class OrderDetailPage extends StatelessWidget {
     required this.onCancel,
   });
 
-  static const Color _primary = Color(0xFF1976D2);
+  static const Color _primary = primaryBlue;
 
   String _statusText(dynamic status) {
     switch (status?.toString()) {

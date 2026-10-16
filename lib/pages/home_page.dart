@@ -1,14 +1,43 @@
 import 'package:flutter/material.dart';
-import 'package:supabase_flutter/supabase_flutter.dart';
+
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
 import 'order_page.dart';
-import 'order_history_page.dart';
 
-class HomePage extends StatelessWidget {
+class HomePage extends StatefulWidget {
   const HomePage({super.key});
 
-  Future<Map<String, dynamic>?> loadProfile() async {
+  @override
+  State<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends State<HomePage> {
+  late Future<Map<String, dynamic>?> _profileFuture;
+  late Future<List<Map<String, dynamic>>> _servicesFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAll();
+  }
+
+  void _loadAll() {
+    _profileFuture = _loadProfile();
+    _servicesFuture = _loadServices();
+  }
+
+  Future<void> _refresh() async {
+    setState(() {
+      _loadAll();
+    });
+    try {
+      await Future.wait([_profileFuture, _servicesFuture]);
+    } catch (_) {
+      // FutureBuilder will render the error state.
+    }
+  }
+
+  Future<Map<String, dynamic>?> _loadProfile() async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
 
@@ -19,7 +48,7 @@ class HomePage extends StatelessWidget {
         .maybeSingle();
   }
 
-  Future<List<Map<String, dynamic>>> loadServices() async {
+  Future<List<Map<String, dynamic>>> _loadServices() async {
     final response = await supabase
         .from('services')
         .select('id, name, description, price, unit, icon')
@@ -50,7 +79,7 @@ class HomePage extends StatelessWidget {
     final price = double.tryParse(value.toString()) ?? 0;
     return price.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
-          (match) => '.',
+      (match) => '.',
     );
   }
 
@@ -80,22 +109,16 @@ class HomePage extends StatelessWidget {
           ),
         ],
       ),
-
       body: RefreshIndicator(
-        onRefresh: () async {
-          // Kéo xuống để tải lại danh sách dịch vụ.
-          // FutureBuilder bên dưới sẽ được làm mới khi mở lại trang.
-          await loadServices();
-        },
+        onRefresh: _refresh,
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
             FutureBuilder<Map<String, dynamic>?>(
-              future: loadProfile(),
+              future: _profileFuture,
               builder: (context, snapshot) {
                 final name =
-                    snapshot.data?['full_name']?.toString() ??
-                        'Khách hàng';
+                    snapshot.data?['full_name']?.toString() ?? 'Khách hàng';
 
                 return Container(
                   padding: const EdgeInsets.all(22),
@@ -145,9 +168,7 @@ class HomePage extends StatelessWidget {
                 );
               },
             ),
-
             const SizedBox(height: 26),
-
             const Text(
               'Dịch vụ của chúng tôi',
               style: TextStyle(
@@ -162,15 +183,23 @@ class HomePage extends StatelessWidget {
               style: TextStyle(color: Colors.grey),
             ),
             const SizedBox(height: 16),
-
             FilledButton.icon(
-              onPressed: () {
-                Navigator.push(
+              onPressed: () async {
+                final placed = await Navigator.push<bool>(
                   context,
                   MaterialPageRoute(
                     builder: (_) => const OrderPage(),
                   ),
                 );
+                if (placed == true && context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'Đặt đơn thành công! Bạn có thể theo dõi tiến độ tại tab Đơn hàng.',
+                      ),
+                    ),
+                  );
+                }
               },
               icon: const Icon(Icons.add_shopping_cart),
               label: const Text('Đặt dịch vụ ngay'),
@@ -183,11 +212,9 @@ class HomePage extends StatelessWidget {
                 ),
               ),
             ),
-
             const SizedBox(height: 16),
-
             FutureBuilder<List<Map<String, dynamic>>>(
-              future: loadServices(),
+              future: _servicesFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
                   return const Padding(
@@ -225,14 +252,7 @@ class HomePage extends StatelessWidget {
                           ),
                         ),
                         TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacement(
-                              context,
-                              MaterialPageRoute(
-                                builder: (_) => const HomePage(),
-                              ),
-                            );
-                          },
+                          onPressed: _refresh,
                           child: const Text('Thử lại'),
                         ),
                       ],
@@ -334,7 +354,6 @@ class HomePage extends StatelessWidget {
                 );
               },
             ),
-
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(18),

@@ -218,6 +218,15 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 12),
+                    TextButton(
+                      onPressed: _isLoading
+                          ? null
+                          : () async {
+                              await supabase.auth.signOut();
+                            },
+                      child: const Text('Quay lại đăng nhập'),
+                    ),
                   ],
                 ),
               ),
