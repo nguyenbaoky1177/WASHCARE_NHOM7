@@ -4,7 +4,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
-import 'admin/admin_orders_page.dart';
+import 'admin/admin_hub_page.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -606,7 +606,7 @@ class _AccountPageState extends State<AccountPage> {
                               Navigator.push(
                                 context,
                                 MaterialPageRoute(
-                                  builder: (_) => const AdminOrdersPage(),
+                                  builder: (_) => const AdminHubPage(),
                                 ),
                               );
                             },
