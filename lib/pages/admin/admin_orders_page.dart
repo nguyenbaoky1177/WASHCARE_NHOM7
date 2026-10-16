@@ -183,7 +183,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
       final errStr = e.toString().toLowerCase();
       String msg = 'Lỗi cập nhật: $e';
       if (errStr.contains('admin') || errStr.contains('permission') || errStr.contains('42501')) {
-        msg = 'Lỗi: Tài khoản của bạn chưa được cấp role="admin" trong bảng profiles của Supabase.';
+        msg = 'Lỗi: Tài khoản chưa có role="admin" trong bảng profiles Supabase.';
+      } else if (errStr.contains('không hợp lệ') || errStr.contains('p0001')) {
+        msg = 'Database Trigger đang chặn chuyển sang trạng thái này. Bạn có thể bấm nút "Xong & Giao" hoặc mở chi tiết đơn để chọn.';
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -429,17 +431,34 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                   ],
                 )
               else if (order.status == 'confirmed')
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: const Color(0xFF7952B3),
-                      padding: const EdgeInsets.symmetric(vertical: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 6,
+                      child: FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: const Color(0xFF7952B3),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onPressed: () => _quickUpdateStatus(order, 'processing', 'Đang giặt sấy'),
+                        icon: const Icon(Icons.local_laundry_service, size: 16),
+                        label: const Text('Bắt đầu sấy'),
+                      ),
                     ),
-                    onPressed: () => _quickUpdateStatus(order, 'processing', 'Đang giặt sấy'),
-                    icon: const Icon(Icons.local_laundry_service, size: 16),
-                    label: const Text('Bắt đầu giặt sấy'),
-                  ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      flex: 4,
+                      child: OutlinedButton(
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF16845B),
+                          side: const BorderSide(color: Color(0xFF16845B)),
+                          padding: const EdgeInsets.symmetric(vertical: 8),
+                        ),
+                        onPressed: () => _quickUpdateStatus(order, 'completed', 'Đã hoàn tất'),
+                        child: const Text('Xong & Giao'),
+                      ),
+                    ),
+                  ],
                 )
               else if (order.status == 'processing')
                 SizedBox(
