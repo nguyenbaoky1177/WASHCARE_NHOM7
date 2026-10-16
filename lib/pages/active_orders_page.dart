@@ -1,8 +1,8 @@
-
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
+import '../models/models.dart';
 
 class ActiveOrdersPage extends StatefulWidget {
   const ActiveOrdersPage({super.key});
@@ -12,7 +12,7 @@ class ActiveOrdersPage extends StatefulWidget {
 }
 
 class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
-  late Future<List<Map<String, dynamic>>> _ordersFuture;
+  late Future<List<OrderModel>> _ordersFuture;
   String _selectedFilter = 'all';
   final Set<String> _cancellingOrders = {};
 
@@ -25,7 +25,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     _ordersFuture = _loadOrders();
   }
 
-  Future<List<Map<String, dynamic>>> _loadOrders() async {
+  Future<List<OrderModel>> _loadOrders() async {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
 
@@ -35,7 +35,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
         .eq('user_id', user.id)
         .order('created_at', ascending: false);
 
-    return List<Map<String, dynamic>>.from(result);
+    return (result as List)
+        .whereType<Map<String, dynamic>>()
+        .map((item) => OrderModel.fromJson(item))
+        .toList();
   }
 
   Future<void> _refreshOrders() async {
@@ -50,107 +53,31 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     try {
       await future;
     } catch (_) {
-      // FutureBuilder hiển thị lỗi tải dữ liệu.
+      // FutureBuilder handles displaying error state.
     }
   }
 
-  List<Map<String, dynamic>> _filterOrders(
-      List<Map<String, dynamic>> orders,
-      ) {
+  List<OrderModel> _filterOrders(List<OrderModel> orders) {
     switch (_selectedFilter) {
       case 'active':
-        return orders
-            .where((o) =>
-            ['pending', 'confirmed', 'processing'].contains(o['status']))
-            .toList();
+        return orders.where((o) => o.isActive).toList();
       case 'completed':
-        return orders.where((o) => o['status'] == 'completed').toList();
+        return orders.where((o) => o.isCompleted).toList();
       case 'cancelled':
-        return orders.where((o) => o['status'] == 'cancelled').toList();
+        return orders.where((o) => o.isCancelled).toList();
       default:
         return orders;
     }
   }
 
-  String _statusText(dynamic status) {
-    switch (status?.toString()) {
-      case 'pending':
-        return 'Chờ xác nhận';
-      case 'confirmed':
-        return 'Đã xác nhận';
-      case 'processing':
-        return 'Đang xử lý';
-      case 'completed':
-        return 'Hoàn thành';
-      case 'cancelled':
-        return 'Đã hủy';
-      default:
-        return 'Không xác định';
-    }
-  }
-
-  Color _statusColor(dynamic status) {
-    switch (status?.toString()) {
-      case 'pending':
-        return const Color(0xFFED8B00);
-      case 'confirmed':
-        return const Color(0xFF1976D2);
-      case 'processing':
-        return const Color(0xFF7952B3);
-      case 'completed':
-        return const Color(0xFF16845B);
-      case 'cancelled':
-        return const Color(0xFFD64545);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  IconData _statusIcon(dynamic status) {
-    switch (status?.toString()) {
-      case 'pending':
-        return Icons.schedule;
-      case 'confirmed':
-        return Icons.check_circle_outline;
-      case 'processing':
-        return Icons.local_laundry_service_outlined;
-      case 'completed':
-        return Icons.task_alt;
-      case 'cancelled':
-        return Icons.cancel_outlined;
-      default:
-        return Icons.info_outline;
-    }
-  }
-
-  String _formatDate(dynamic value) {
-    if (value == null) return 'Chưa có thông tin';
-
-    final date = DateTime.tryParse(value.toString())?.toLocal();
-    if (date == null) return value.toString();
-
-    String two(int n) => n.toString().padLeft(2, '0');
-
-    return '${two(date.day)}/${two(date.month)}/${date.year} '
-        '${two(date.hour)}:${two(date.minute)}';
-  }
-
-  String _formatPrice(dynamic value) {
-    final price = double.tryParse(value?.toString() ?? '') ?? 0;
-    return '${price.toStringAsFixed(0)} đ';
-  }
-
-  int _countOrders(List<Map<String, dynamic>> orders, String filter) {
+  int _countOrders(List<OrderModel> orders, String filter) {
     switch (filter) {
       case 'active':
-        return orders
-            .where((o) =>
-            ['pending', 'confirmed', 'processing'].contains(o['status']))
-            .length;
+        return orders.where((o) => o.isActive).length;
       case 'completed':
-        return orders.where((o) => o['status'] == 'completed').length;
+        return orders.where((o) => o.isCompleted).length;
       case 'cancelled':
-        return orders.where((o) => o['status'] == 'cancelled').length;
+        return orders.where((o) => o.isCancelled).length;
       default:
         return orders.length;
     }
@@ -164,8 +91,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     );
   }
 
-  Future<void> _cancelOrder(Map<String, dynamic> order) async {
-    if (order['status'] != 'pending') {
+  Future<void> _cancelOrder(OrderModel order) async {
+    if (!order.isPending) {
       _showMessage('Chỉ có thể hủy đơn đang chờ xác nhận.');
       return;
     }
@@ -175,8 +102,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       builder: (dialogContext) => AlertDialog(
         title: const Text('Xác nhận hủy đơn'),
         content: Text(
-          'Bạn có chắc muốn hủy đơn hàng #${order['id']} không? '
-              'Thao tác này sẽ cập nhật trạng thái đơn.',
+          'Bạn có chắc muốn hủy đơn hàng #${order.id} không? '
+          'Thao tác này sẽ cập nhật trạng thái đơn.',
         ),
         actions: [
           TextButton(
@@ -202,7 +129,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       return;
     }
 
-    final orderId = order['id'].toString();
+    final orderId = order.id.toString();
 
     if (_cancellingOrders.contains(orderId)) return;
 
@@ -216,7 +143,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       final updated = await supabase
           .from('orders')
           .update({'status': 'cancelled'})
-          .eq('id', order['id'])
+          .eq('id', order.id)
           .eq('user_id', user.id)
           .eq('status', 'pending')
           .select('id');
@@ -226,7 +153,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       if (updated.isEmpty) {
         _showMessage(
           'Không thể hủy đơn. Có thể trạng thái đơn đã thay đổi '
-              'hoặc bạn không có quyền cập nhật đơn này.',
+          'hoặc bạn không có quyền cập nhật đơn này.',
         );
       } else {
         cancelledSuccessfully = true;
@@ -247,7 +174,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     }
   }
 
-  Widget _buildFilter(List<Map<String, dynamic>> orders) {
+  Widget _buildFilter(List<OrderModel> orders) {
     const filters = [
       ('all', 'Tất cả'),
       ('active', 'Đang xử lý'),
@@ -279,8 +206,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
             ),
             labelStyle: TextStyle(
               color: selected ? Colors.white : const Color(0xFF44546A),
-              fontWeight:
-              selected ? FontWeight.w600 : FontWeight.normal,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             ),
             onSelected: (_) {
               setState(() {
@@ -293,14 +219,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     );
   }
 
-  Future<void> _openOrderDetail(
-      Map<String, dynamic> order,
-      ) async {
+  Future<void> _openOrderDetail(OrderModel order) async {
     await Navigator.push(
       context,
       MaterialPageRoute(
         builder: (_) => OrderDetailPage(
-          order: Map<String, dynamic>.from(order),
+          order: order,
           onCancel: () => _cancelOrder(order),
         ),
       ),
@@ -311,11 +235,9 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     }
   }
 
-  Widget _buildOrderCard(Map<String, dynamic> order) {
-    final status = order['status'];
-    final color = _statusColor(status);
-    final items = order['order_items'] as List? ?? [];
-    final orderId = order['id'].toString();
+  Widget _buildOrderCard(OrderModel order) {
+    final color = order.statusColor;
+    final orderId = order.id.toString();
     final cancelling = _cancellingOrders.contains(orderId);
 
     return Card(
@@ -356,7 +278,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Đơn hàng #${order['id']}',
+                          'Đơn hàng #${order.id}',
                           style: const TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -365,7 +287,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                         ),
                         const SizedBox(height: 5),
                         Text(
-                          _formatDate(order['created_at']),
+                          order.formattedCreatedAt,
                           style: const TextStyle(
                             color: Colors.black54,
                             fontSize: 12,
@@ -388,11 +310,11 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(_statusIcon(status), size: 14, color: color),
+                          Icon(order.statusIcon, size: 14, color: color),
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              _statusText(status),
+                              order.statusDisplayName,
                               style: TextStyle(
                                 color: color,
                                 fontSize: 11,
@@ -409,15 +331,15 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               const Divider(height: 28),
               _infoRow(
                 Icons.person_outline,
-                order['customer_name']?.toString().isNotEmpty == true
-                    ? order['customer_name'].toString()
+                order.customerName.isNotEmpty
+                    ? order.customerName
                     : 'Chưa có tên người nhận',
               ),
               const SizedBox(height: 10),
               _infoRow(
                 Icons.location_on_outlined,
-                order['address']?.toString().isNotEmpty == true
-                    ? order['address'].toString()
+                order.address.isNotEmpty
+                    ? order.address
                     : 'Chưa có địa chỉ',
               ),
               const SizedBox(height: 16),
@@ -431,21 +353,13 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 ),
               ),
               const SizedBox(height: 10),
-              if (items.isEmpty)
+              if (order.items.isEmpty)
                 const Text(
                   'Chưa có thông tin dịch vụ.',
                   style: TextStyle(color: Colors.black54),
                 )
               else
-                ...items.map((item) {
-                  final service = item['services'];
-                  final name = service is Map
-                      ? service['name']?.toString() ?? 'Dịch vụ'
-                      : 'Dịch vụ';
-                  final unit = service is Map
-                      ? service['unit']?.toString() ?? ''
-                      : '';
-
+                ...order.items.map((item) {
                   return Padding(
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
@@ -456,9 +370,9 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                           color: _primary,
                         ),
                         const SizedBox(width: 8),
-                        Expanded(child: Text(name)),
+                        Expanded(child: Text(item.serviceName)),
                         Text(
-                          '${item['quantity'] ?? 0} $unit',
+                          '${item.formattedQuantity} ${item.serviceUnit}',
                           style: const TextStyle(color: Colors.black54),
                         ),
                       ],
@@ -478,7 +392,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   ),
                   Flexible(
                     child: Text(
-                      _formatPrice(order['total_price']),
+                      order.formattedTotalPrice,
                       textAlign: TextAlign.end,
                       style: const TextStyle(
                         color: _primary,
@@ -492,7 +406,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               const SizedBox(height: 10),
               _infoRow(
                 Icons.access_time,
-                'Thời gian nhận: ${_formatDate(order['pickup_time'])}',
+                'Thời gian nhận: ${order.formattedPickupTime}',
               ),
               const SizedBox(height: 12),
               const Align(
@@ -506,21 +420,20 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   ),
                 ),
               ),
-              if (status == 'pending') ...[
+              if (order.isPending) ...[
                 const Divider(height: 24),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton.icon(
-                    onPressed:
-                    cancelling ? null : () => _cancelOrder(order),
+                    onPressed: cancelling ? null : () => _cancelOrder(order),
                     icon: cancelling
                         ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                      ),
-                    )
+                            width: 16,
+                            height: 16,
+                            child: CircularProgressIndicator(
+                              strokeWidth: 2,
+                            ),
+                          )
                         : const Icon(Icons.cancel_outlined),
                     label: Text(
                       cancelling ? 'Đang hủy...' : 'Hủy đơn hàng',
@@ -594,7 +507,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
         foregroundColor: Colors.white,
         elevation: 0,
       ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
+      body: FutureBuilder<List<OrderModel>>(
         future: _ordersFuture,
         builder: (context, snapshot) {
           if (snapshot.connectionState == ConnectionState.waiting) {
@@ -671,12 +584,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   child: filteredOrders.isEmpty
                       ? _buildEmptyState()
                       : ListView.builder(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: filteredOrders.length,
-                    itemBuilder: (context, index) =>
-                        _buildOrderCard(filteredOrders[index]),
-                  ),
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                          itemCount: filteredOrders.length,
+                          itemBuilder: (context, index) =>
+                              _buildOrderCard(filteredOrders[index]),
+                        ),
                 ),
               ),
             ],
@@ -688,7 +601,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
 }
 
 class OrderDetailPage extends StatelessWidget {
-  final Map<String, dynamic> order;
+  final OrderModel order;
   final Future<void> Function() onCancel;
 
   const OrderDetailPage({
@@ -698,57 +611,6 @@ class OrderDetailPage extends StatelessWidget {
   });
 
   static const Color _primary = primaryBlue;
-
-  String _statusText(dynamic status) {
-    switch (status?.toString()) {
-      case 'pending':
-        return 'Chờ xác nhận';
-      case 'confirmed':
-        return 'Đã xác nhận';
-      case 'processing':
-        return 'Đang xử lý';
-      case 'completed':
-        return 'Hoàn thành';
-      case 'cancelled':
-        return 'Đã hủy';
-      default:
-        return 'Không xác định';
-    }
-  }
-
-  Color _statusColor(dynamic status) {
-    switch (status?.toString()) {
-      case 'pending':
-        return const Color(0xFFED8B00);
-      case 'confirmed':
-        return const Color(0xFF1976D2);
-      case 'processing':
-        return const Color(0xFF7952B3);
-      case 'completed':
-        return const Color(0xFF16845B);
-      case 'cancelled':
-        return const Color(0xFFD64545);
-      default:
-        return Colors.grey;
-    }
-  }
-
-  String _formatDate(dynamic value) {
-    if (value == null) return 'Chưa có thông tin';
-
-    final date = DateTime.tryParse(value.toString())?.toLocal();
-    if (date == null) return value.toString();
-
-    String two(int n) => n.toString().padLeft(2, '0');
-
-    return '${two(date.day)}/${two(date.month)}/${date.year} '
-        '${two(date.hour)}:${two(date.minute)}';
-  }
-
-  String _formatPrice(dynamic value) {
-    final price = double.tryParse(value?.toString() ?? '') ?? 0;
-    return '${price.toStringAsFixed(0)} đ';
-  }
 
   Widget _detailRow(String title, String value) {
     return Padding(
@@ -777,13 +639,10 @@ class OrderDetailPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final status = order['status'];
-    final items = order['order_items'] as List? ?? [];
-
     return Scaffold(
       backgroundColor: const Color(0xFFF4F7FB),
       appBar: AppBar(
-        title: Text('Chi tiết đơn #${order['id']}'),
+        title: Text('Chi tiết đơn #${order.id}'),
         backgroundColor: _primary,
         foregroundColor: Colors.white,
       ),
@@ -817,32 +676,39 @@ class OrderDetailPage extends StatelessWidget {
                       vertical: 9,
                     ),
                     decoration: BoxDecoration(
-                      color: _statusColor(status).withValues(alpha: 0.10),
+                      color: order.statusColor.withValues(alpha: 0.10),
                       borderRadius: BorderRadius.circular(22),
                     ),
                     child: Text(
-                      _statusText(status),
+                      order.statusDisplayName,
                       style: TextStyle(
-                        color: _statusColor(status),
+                        color: order.statusColor,
                         fontWeight: FontWeight.bold,
                       ),
                     ),
                   ),
                   const Divider(height: 32),
-                  _detailRow('Mã đơn', '#${order['id']}'),
-                  _detailRow('Ngày đặt', _formatDate(order['created_at'])),
-                  _detailRow(
-                    'Thời gian nhận',
-                    _formatDate(order['pickup_time']),
-                  ),
+                  _detailRow('Mã đơn', '#${order.id}'),
+                  _detailRow('Ngày đặt', order.formattedCreatedAt),
+                  _detailRow('Thời gian nhận', order.formattedPickupTime),
                   _detailRow(
                     'Người nhận',
-                    order['customer_name']?.toString() ?? '',
+                    order.customerName.isNotEmpty
+                        ? order.customerName
+                        : 'Chưa có tên',
+                  ),
+                  _detailRow(
+                    'Số điện thoại',
+                    order.phone.isNotEmpty ? order.phone : 'Chưa có số',
                   ),
                   _detailRow(
                     'Địa chỉ',
-                    order['address']?.toString() ?? '',
+                    order.address.isNotEmpty
+                        ? order.address
+                        : 'Chưa có địa chỉ',
                   ),
+                  if ((order.note ?? '').isNotEmpty)
+                    _detailRow('Ghi chú', order.note!),
                 ],
               ),
             ),
@@ -869,18 +735,10 @@ class OrderDetailPage extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  if (items.isEmpty)
+                  if (order.items.isEmpty)
                     const Text('Chưa có thông tin dịch vụ.')
                   else
-                    ...items.map((item) {
-                      final service = item['services'];
-                      final name = service is Map
-                          ? service['name']?.toString() ?? 'Dịch vụ'
-                          : 'Dịch vụ';
-                      final unit = service is Map
-                          ? service['unit']?.toString() ?? ''
-                          : '';
-
+                    ...order.items.map((item) {
                       return Padding(
                         padding: const EdgeInsets.symmetric(vertical: 9),
                         child: Row(
@@ -892,16 +750,25 @@ class OrderDetailPage extends StatelessWidget {
                             const SizedBox(width: 10),
                             Expanded(
                               child: Text(
-                                name,
+                                item.serviceName,
                                 style: const TextStyle(
                                   fontWeight: FontWeight.w600,
                                 ),
                               ),
                             ),
                             Text(
-                              '${item['quantity'] ?? 0} $unit',
+                              '${item.formattedQuantity} ${item.serviceUnit}',
                               style: const TextStyle(color: Colors.black54),
                             ),
+                            if (item.subtotal > 0) ...[
+                              const SizedBox(width: 12),
+                              Text(
+                                item.formattedSubtotal,
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
                           ],
                         ),
                       );
@@ -916,7 +783,7 @@ class OrderDetailPage extends StatelessWidget {
                         ),
                       ),
                       Text(
-                        _formatPrice(order['total_price']),
+                        order.formattedTotalPrice,
                         style: const TextStyle(
                           color: _primary,
                           fontSize: 20,
@@ -929,7 +796,7 @@ class OrderDetailPage extends StatelessWidget {
               ),
             ),
           ),
-          if (status == 'pending') ...[
+          if (order.isPending) ...[
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,

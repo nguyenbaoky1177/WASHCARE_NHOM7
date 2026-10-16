@@ -3,6 +3,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
+import '../models/models.dart';
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -19,7 +20,7 @@ class _OrderPageState extends State<OrderPage> {
   final _addressController = TextEditingController();
   final _noteController = TextEditingController();
 
-  List<Map<String, dynamic>> _services = [];
+  List<ServiceModel> _services = [];
   final Map<int, double> _quantities = {};
 
   DateTime? _pickupTime;
@@ -46,29 +47,32 @@ class _OrderPageState extends State<OrderPage> {
       final user = supabase.auth.currentUser;
 
       if (user != null) {
-        final profile = await supabase
+        final profileData = await supabase
             .from('profiles')
-            .select('full_name, phone')
+            .select('id, full_name, phone')
             .eq('id', user.id)
             .maybeSingle();
 
-        _nameController.text =
-            profile?['full_name']?.toString() ?? '';
-
-        _phoneController.text =
-            profile?['phone']?.toString() ?? '';
+        if (profileData != null) {
+          final profile = ProfileModel.fromJson(profileData);
+          _nameController.text = profile.fullName;
+          _phoneController.text = profile.phone ?? '';
+        }
       }
 
       final result = await supabase
           .from('services')
-          .select('id, name, description, price, unit')
+          .select('id, name, description, price, unit, icon, is_active')
           .eq('is_active', true)
           .order('id');
 
-      _services = List<Map<String, dynamic>>.from(result);
+      _services = (result as List)
+          .whereType<Map<String, dynamic>>()
+          .map((item) => ServiceModel.fromJson(item))
+          .toList();
 
       for (final service in _services) {
-        _quantities[service['id'] as int] = 0;
+        _quantities[service.id] = 0;
       }
     } catch (e) {
       if (mounted) {
@@ -83,24 +87,16 @@ class _OrderPageState extends State<OrderPage> {
 
   double get _total {
     double total = 0;
-
     for (final service in _services) {
-      final id = service['id'] as int;
-      final price = double.tryParse(
-        service['price'].toString(),
-      ) ??
-          0;
-
-      total += price * (_quantities[id] ?? 0);
+      total += service.price * (_quantities[service.id] ?? 0);
     }
-
     return total;
   }
 
   String _money(num value) {
     return value.toStringAsFixed(0).replaceAllMapped(
       RegExp(r'\B(?=(\d{3})+(?!\d))'),
-          (match) => '.',
+      (match) => '.',
     );
   }
 
@@ -151,12 +147,11 @@ class _OrderPageState extends State<OrderPage> {
     final items = <Map<String, dynamic>>[];
 
     for (final service in _services) {
-      final id = service['id'] as int;
-      final quantity = _quantities[id] ?? 0;
+      final quantity = _quantities[service.id] ?? 0;
 
       if (quantity > 0) {
         items.add({
-          'service_id': id,
+          'service_id': service.id,
           'quantity': quantity,
         });
       }
@@ -209,7 +204,7 @@ class _OrderPageState extends State<OrderPage> {
           title: const Text('Đặt đơn thành công!'),
           content: Text(
             'Mã đơn hàng của bạn: #$orderId\n'
-                'Tổng tiền: ${_money(_total)} đ',
+            'Tổng tiền: ${_money(_total)} đ',
           ),
           actions: [
             FilledButton(
@@ -277,229 +272,215 @@ class _OrderPageState extends State<OrderPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : Form(
-        key: _formKey,
-        child: ListView(
-          padding: const EdgeInsets.all(18),
-          children: [
-            const Text(
-              'Chọn dịch vụ',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: darkBlue,
-              ),
-            ),
-            const SizedBox(height: 12),
-
-            if (_services.isEmpty)
-              const Text('Hiện chưa có dịch vụ khả dụng.'),
-
-            ..._services.map((service) {
-              final id = service['id'] as int;
-              final quantity = _quantities[id] ?? 0;
-              final price = double.tryParse(
-                service['price'].toString(),
-              ) ??
-                  0;
-              final unit = service['unit']?.toString() ?? '';
-
-              return Card(
-                color: Colors.white,
-                margin: const EdgeInsets.only(bottom: 12),
-                child: Padding(
-                  padding: const EdgeInsets.all(14),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        service['name'].toString(),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 17,
-                        ),
-                      ),
-                      const SizedBox(height: 5),
-                      Text(
-                        service['description']?.toString() ?? '',
-                      ),
-                      const SizedBox(height: 6),
-                      Text(
-                        '${_money(price)} đ / $unit',
-                        style: const TextStyle(
-                          color: primaryBlue,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      Row(
-                        children: [
-                          Text('Số lượng ($unit)'),
-                          const Spacer(),
-                          IconButton(
-                            onPressed: quantity <= 0
-                                ? null
-                                : () {
-                              setState(() {
-                                _quantities[id] =
-                                    quantity - 1;
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.remove_circle_outline,
-                            ),
-                          ),
-                          Text(
-                            quantity.toStringAsFixed(
-                              quantity % 1 == 0 ? 0 : 1,
-                            ),
-                            style: const TextStyle(
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                          IconButton(
-                            onPressed: () {
-                              setState(() {
-                                _quantities[id] = quantity + 1;
-                              });
-                            },
-                            icon: const Icon(
-                              Icons.add_circle_outline,
-                              color: primaryBlue,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                ),
-              );
-            }),
-
-            const SizedBox(height: 18),
-            const Text(
-              'Thông tin nhận đồ',
-              style: TextStyle(
-                fontSize: 22,
-                fontWeight: FontWeight.bold,
-                color: darkBlue,
-              ),
-            ),
-            const SizedBox(height: 14),
-
-            _field(
-              controller: _nameController,
-              label: 'Họ và tên',
-              icon: Icons.person_outline,
-              validator: (v) =>
-              v == null || v.trim().isEmpty
-                  ? 'Vui lòng nhập họ tên'
-                  : null,
-            ),
-            _field(
-              controller: _phoneController,
-              label: 'Số điện thoại',
-              icon: Icons.phone_outlined,
-              keyboardType: TextInputType.phone,
-              validator: (v) {
-                if (v == null || v.trim().isEmpty) {
-                  return 'Vui lòng nhập số điện thoại';
-                }
-                final clean = v.trim();
-                if (!RegExp(r'^(0[1-9][0-9]{8,9})$').hasMatch(clean)) {
-                  return 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)';
-                }
-                return null;
-              },
-            ),
-            _field(
-              controller: _addressController,
-              label: 'Địa chỉ nhận đồ',
-              icon: Icons.location_on_outlined,
-              validator: (v) =>
-              v == null || v.trim().isEmpty
-                  ? 'Vui lòng nhập địa chỉ'
-                  : null,
-            ),
-
-            OutlinedButton.icon(
-              onPressed: _choosePickupTime,
-              icon: const Icon(Icons.calendar_month),
-              label: Text(
-                _pickupTime == null
-                    ? 'Chọn thời gian lấy đồ'
-                    : 'Lấy đồ: ${_pickupTime!.day.toString().padLeft(2, '0')}/'
-                    '${_pickupTime!.month.toString().padLeft(2, '0')}/'
-                    '${_pickupTime!.year} '
-                    '${_pickupTime!.hour.toString().padLeft(2, '0')}:'
-                    '${_pickupTime!.minute.toString().padLeft(2, '0')}',
-              ),
-            ),
-
-            const SizedBox(height: 14),
-            _field(
-              controller: _noteController,
-              label: 'Ghi chú (không bắt buộc)',
-              icon: Icons.notes,
-              maxLines: 3,
-            ),
-
-            Container(
-              margin: const EdgeInsets.symmetric(vertical: 18),
-              padding: const EdgeInsets.all(18),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEAF4FF),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
+              key: _formKey,
+              child: ListView(
+                padding: const EdgeInsets.all(18),
                 children: [
                   const Text(
-                    'Tổng tiền dự kiến',
-                    style: TextStyle(color: darkBlue),
-                  ),
-                  const SizedBox(height: 8),
-                  Text(
-                    '${_money(_total)} đ',
-                    style: const TextStyle(
-                      fontSize: 26,
+                    'Chọn dịch vụ',
+                    style: TextStyle(
+                      fontSize: 22,
                       fontWeight: FontWeight.bold,
-                      color: primaryBlue,
+                      color: darkBlue,
                     ),
                   ),
-                  const SizedBox(height: 6),
+                  const SizedBox(height: 12),
+                  if (_services.isEmpty)
+                    const Text('Hiện chưa có dịch vụ khả dụng.'),
+                  ..._services.map((service) {
+                    final quantity = _quantities[service.id] ?? 0;
+
+                    return Card(
+                      color: Colors.white,
+                      margin: const EdgeInsets.only(bottom: 12),
+                      child: Padding(
+                        padding: const EdgeInsets.all(14),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              service.name,
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 17,
+                              ),
+                            ),
+                            if (service.description.isNotEmpty) ...[
+                              const SizedBox(height: 5),
+                              Text(service.description),
+                            ],
+                            const SizedBox(height: 6),
+                            Text(
+                              '${service.formattedPrice} đ / ${service.unit}',
+                              style: const TextStyle(
+                                color: primaryBlue,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Row(
+                              children: [
+                                Text('Số lượng (${service.unit})'),
+                                const Spacer(),
+                                IconButton(
+                                  onPressed: quantity <= 0
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            _quantities[service.id] =
+                                                quantity - 1;
+                                          });
+                                        },
+                                  icon: const Icon(
+                                    Icons.remove_circle_outline,
+                                  ),
+                                ),
+                                Text(
+                                  quantity.toStringAsFixed(
+                                    quantity % 1 == 0 ? 0 : 1,
+                                  ),
+                                  style: const TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                IconButton(
+                                  onPressed: () {
+                                    setState(() {
+                                      _quantities[service.id] = quantity + 1;
+                                    });
+                                  },
+                                  icon: const Icon(
+                                    Icons.add_circle_outline,
+                                    color: primaryBlue,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+                  const SizedBox(height: 18),
                   const Text(
-                    'Tổng tiền được tính theo giá dịch vụ hiện tại.',
-                    style: TextStyle(fontSize: 12),
+                    'Thông tin nhận đồ',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: darkBlue,
+                    ),
                   ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _nameController,
+                    label: 'Họ và tên',
+                    icon: Icons.person_outline,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty
+                            ? 'Vui lòng nhập họ tên'
+                            : null,
+                  ),
+                  _field(
+                    controller: _phoneController,
+                    label: 'Số điện thoại',
+                    icon: Icons.phone_outlined,
+                    keyboardType: TextInputType.phone,
+                    validator: (v) {
+                      if (v == null || v.trim().isEmpty) {
+                        return 'Vui lòng nhập số điện thoại';
+                      }
+                      final clean = v.trim();
+                      if (!RegExp(r'^(0[1-9][0-9]{8,9})$').hasMatch(clean)) {
+                        return 'Số điện thoại không hợp lệ (10 chữ số, bắt đầu bằng 0)';
+                      }
+                      return null;
+                    },
+                  ),
+                  _field(
+                    controller: _addressController,
+                    label: 'Địa chỉ nhận đồ',
+                    icon: Icons.location_on_outlined,
+                    validator: (v) =>
+                        v == null || v.trim().isEmpty
+                            ? 'Vui lòng nhập địa chỉ'
+                            : null,
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _choosePickupTime,
+                    icon: const Icon(Icons.calendar_month),
+                    label: Text(
+                      _pickupTime == null
+                          ? 'Chọn thời gian lấy đồ'
+                          : 'Lấy đồ: ${_pickupTime!.day.toString().padLeft(2, '0')}/'
+                              '${_pickupTime!.month.toString().padLeft(2, '0')}/'
+                              '${_pickupTime!.year} '
+                              '${_pickupTime!.hour.toString().padLeft(2, '0')}:'
+                              '${_pickupTime!.minute.toString().padLeft(2, '0')}',
+                    ),
+                  ),
+                  const SizedBox(height: 14),
+                  _field(
+                    controller: _noteController,
+                    label: 'Ghi chú (không bắt buộc)',
+                    icon: Icons.notes,
+                    maxLines: 3,
+                  ),
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 18),
+                    padding: const EdgeInsets.all(18),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFEAF4FF),
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Tổng tiền dự kiến',
+                          style: TextStyle(color: darkBlue),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${_money(_total)} đ',
+                          style: const TextStyle(
+                            fontSize: 26,
+                            fontWeight: FontWeight.bold,
+                            color: primaryBlue,
+                          ),
+                        ),
+                        const SizedBox(height: 6),
+                        const Text(
+                          'Tổng tiền được tính theo giá dịch vụ hiện tại.',
+                          style: TextStyle(fontSize: 12),
+                        ),
+                      ],
+                    ),
+                  ),
+                  SizedBox(
+                    height: 52,
+                    child: FilledButton.icon(
+                      onPressed: _submitting ? null : _submitOrder,
+                      icon: _submitting
+                          ? const SizedBox(
+                              width: 20,
+                              height: 20,
+                              child: CircularProgressIndicator(
+                                strokeWidth: 2,
+                                color: Colors.white,
+                              ),
+                            )
+                          : const Icon(Icons.shopping_bag_outlined),
+                      label: Text(
+                        _submitting ? 'Đang đặt đơn...' : 'Đặt đơn',
+                      ),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: primaryBlue,
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 24),
                 ],
               ),
             ),
-
-            SizedBox(
-              height: 52,
-              child: FilledButton.icon(
-                onPressed: _submitting ? null : _submitOrder,
-                icon: _submitting
-                    ? const SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white,
-                  ),
-                )
-                    : const Icon(Icons.shopping_bag_outlined),
-                label: Text(
-                  _submitting ? 'Đang đặt đơn...' : 'Đặt đơn',
-                ),
-                style: FilledButton.styleFrom(
-                  backgroundColor: primaryBlue,
-                ),
-              ),
-            ),
-            const SizedBox(height: 24),
-          ],
-        ),
-      ),
     );
   }
 }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
 import '../core/supabase_client.dart';
+import '../models/models.dart';
 import 'order_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -12,8 +13,8 @@ class HomePage extends StatefulWidget {
 }
 
 class _HomePageState extends State<HomePage> {
-  late Future<Map<String, dynamic>?> _profileFuture;
-  late Future<List<Map<String, dynamic>>> _servicesFuture;
+  late Future<ProfileModel?> _profileFuture;
+  late Future<List<ServiceModel>> _servicesFuture;
 
   @override
   void initState() {
@@ -37,50 +38,31 @@ class _HomePageState extends State<HomePage> {
     }
   }
 
-  Future<Map<String, dynamic>?> _loadProfile() async {
+  Future<ProfileModel?> _loadProfile() async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
 
-    return await supabase
+    final response = await supabase
         .from('profiles')
-        .select('full_name, role')
+        .select('id, full_name, phone, role, created_at')
         .eq('id', user.id)
         .maybeSingle();
+
+    if (response == null) return null;
+    return ProfileModel.fromJson(response);
   }
 
-  Future<List<Map<String, dynamic>>> _loadServices() async {
+  Future<List<ServiceModel>> _loadServices() async {
     final response = await supabase
         .from('services')
-        .select('id, name, description, price, unit, icon')
+        .select('id, name, description, price, unit, icon, is_active')
         .eq('is_active', true)
         .order('id');
 
-    return List<Map<String, dynamic>>.from(response);
-  }
-
-  IconData _serviceIcon(String? name) {
-    switch (name) {
-      case 'local_laundry_service':
-        return Icons.local_laundry_service;
-      case 'iron':
-        return Icons.iron;
-      case 'dry_cleaning':
-        return Icons.dry_cleaning;
-      case 'checkroom':
-        return Icons.checkroom;
-      case 'steps':
-        return Icons.directions_walk;
-      default:
-        return Icons.local_laundry_service;
-    }
-  }
-
-  String _formatPrice(dynamic value) {
-    final price = double.tryParse(value.toString()) ?? 0;
-    return price.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => '.',
-    );
+    return (response as List)
+        .whereType<Map<String, dynamic>>()
+        .map((e) => ServiceModel.fromJson(e))
+        .toList();
   }
 
   @override
@@ -114,11 +96,13 @@ class _HomePageState extends State<HomePage> {
         child: ListView(
           padding: const EdgeInsets.all(18),
           children: [
-            FutureBuilder<Map<String, dynamic>?>(
+            FutureBuilder<ProfileModel?>(
               future: _profileFuture,
               builder: (context, snapshot) {
-                final name =
-                    snapshot.data?['full_name']?.toString() ?? 'Khách hàng';
+                final profile = snapshot.data;
+                final name = (profile != null && profile.fullName.isNotEmpty)
+                    ? profile.fullName
+                    : 'Khách hàng';
 
                 return Container(
                   padding: const EdgeInsets.all(22),
@@ -213,7 +197,7 @@ class _HomePageState extends State<HomePage> {
               ),
             ),
             const SizedBox(height: 16),
-            FutureBuilder<List<Map<String, dynamic>>>(
+            FutureBuilder<List<ServiceModel>>(
               future: _servicesFuture,
               builder: (context, snapshot) {
                 if (snapshot.connectionState == ConnectionState.waiting) {
@@ -274,14 +258,6 @@ class _HomePageState extends State<HomePage> {
 
                 return Column(
                   children: services.map((service) {
-                    final name =
-                        service['name']?.toString() ?? 'Dịch vụ';
-                    final description =
-                        service['description']?.toString() ?? '';
-                    final unit = service['unit']?.toString() ?? '';
-                    final iconName = service['icon']?.toString();
-                    final price = _formatPrice(service['price']);
-
                     return Container(
                       margin: const EdgeInsets.only(bottom: 14),
                       padding: const EdgeInsets.all(16),
@@ -309,7 +285,7 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(16),
                             ),
                             child: Icon(
-                              _serviceIcon(iconName),
+                              service.iconData,
                               size: 32,
                               color: primaryBlue,
                             ),
@@ -320,24 +296,26 @@ class _HomePageState extends State<HomePage> {
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Text(
-                                  name,
+                                  service.name,
                                   style: const TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
                                     color: darkBlue,
                                   ),
                                 ),
-                                const SizedBox(height: 5),
-                                Text(
-                                  description,
-                                  style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
+                                if (service.description.isNotEmpty) ...[
+                                  const SizedBox(height: 5),
+                                  Text(
+                                    service.description,
+                                    style: const TextStyle(
+                                      color: Colors.grey,
+                                      fontSize: 13,
+                                    ),
                                   ),
-                                ),
+                                ],
                                 const SizedBox(height: 8),
                                 Text(
-                                  '$price đ / $unit',
+                                  '${service.formattedPrice} đ / ${service.unit}',
                                   style: const TextStyle(
                                     color: primaryBlue,
                                     fontSize: 16,
