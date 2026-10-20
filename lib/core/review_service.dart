@@ -22,12 +22,13 @@ class ReviewService {
         }
       }
 
-      // 2. Thử truy vấn bảng reviews trên Supabase
+      // 2. Thử truy vấn bảng reviews trên Supabase với timeout ngắn 2s
       final response = await supabase
           .from('reviews')
           .select()
           .eq('order_id', orderId)
-          .maybeSingle();
+          .maybeSingle()
+          .timeout(const Duration(seconds: 2));
 
       if (response != null) {
         final review = ReviewModel.fromJson(response);
@@ -80,7 +81,10 @@ class ReviewService {
     }
 
     try {
-      final response = await supabase.from('reviews').select();
+      final response = await supabase
+          .from('reviews')
+          .select()
+          .timeout(const Duration(seconds: 2));
       for (final item in response) {
         final review = ReviewModel.fromJson(Map<String, dynamic>.from(item));
         result[review.orderId] = review;

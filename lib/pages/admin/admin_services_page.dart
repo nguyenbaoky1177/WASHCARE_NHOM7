@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/service_cache.dart';
 import '../../core/supabase_client.dart';
 import '../../models/models.dart';
 
@@ -41,6 +42,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
     });
     try {
       await future;
+      ServiceCache.getServices(forceNetwork: true);
     } catch (_) {}
   }
 

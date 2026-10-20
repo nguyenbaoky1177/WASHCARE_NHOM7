@@ -127,20 +127,29 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     final user = supabase.auth.currentUser;
     if (user == null) return [];
 
-    final result = await supabase
-        .from('orders')
-        .select('*, order_items(*, services(name, unit))')
-        .eq('user_id', user.id)
-        .order('created_at', ascending: false);
-
     try {
-      _reviews = await ReviewService.getAllReviews();
-    } catch (_) {}
+      // Chạy song song truy vấn đơn hàng (kèm timeout 5s) và nạp đánh giá
+      final ordersFuture = supabase
+          .from('orders')
+          .select('*, order_items(*, services(name, unit))')
+          .eq('user_id', user.id)
+          .order('created_at', ascending: false)
+          .timeout(const Duration(seconds: 5));
 
-    return (result as List)
-        .whereType<Map<String, dynamic>>()
-        .map((item) => OrderModel.fromJson(item))
-        .toList();
+      final reviewsFuture = ReviewService.getAllReviews();
+
+      final results = await Future.wait([ordersFuture, reviewsFuture]);
+      final ordersList = (results[0] as List)
+          .whereType<Map<String, dynamic>>()
+          .map((item) => OrderModel.fromJson(item))
+          .toList();
+
+      _reviews = results[1] as Map<int, ReviewModel>;
+      return ordersList;
+    } catch (e) {
+      debugPrint('ActiveOrdersPage._loadOrders error: $e');
+      return [];
+    }
   }
 
   Future<void> _openReviewDialog(OrderModel order) async {

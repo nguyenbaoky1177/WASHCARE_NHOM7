@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
+import '../core/profile_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'admin/admin_hub_page.dart';
@@ -38,38 +39,26 @@ class _AccountPageState extends State<AccountPage> {
     super.dispose();
   }
 
-  Future<void> _loadProfile() async {
+  Future<void> _loadProfile({bool forceNetwork = false}) async {
     try {
       final user = supabase.auth.currentUser;
-
       if (user == null) {
         if (mounted) setState(() => _loading = false);
         return;
       }
 
-      final result = await supabase
-          .from('profiles')
-          .select('id, full_name, phone, role, created_at')
-          .eq('id', user.id)
-          .maybeSingle();
-
+      final profile = await ProfileCache.getProfile(forceNetwork: forceNetwork);
       if (!mounted) return;
 
-      if (result != null) {
-        _profile = ProfileModel.fromJson(result);
-        _nameController.text = _profile!.fullName;
-        _phoneController.text = _profile!.phone ?? '';
-      } else {
-        _profile = null;
-        _nameController.text = '';
-        _phoneController.text = '';
+      if (profile != null) {
+        _profile = profile;
+        _nameController.text = profile.fullName;
+        _phoneController.text = profile.phone ?? '';
       }
-
       setState(() => _loading = false);
     } catch (e) {
       if (!mounted) return;
       setState(() => _loading = false);
-      _showMessage('Không tải được thông tin tài khoản: $e');
     }
   }
 
@@ -191,6 +180,10 @@ class _AccountPageState extends State<AccountPage> {
               );
         _saving = false;
       });
+
+      if (_profile != null) {
+        ProfileCache.updateCache(_profile!);
+      }
 
       _showMessage('Cập nhật thông tin thành công!');
     } catch (e) {
@@ -342,6 +335,7 @@ class _AccountPageState extends State<AccountPage> {
     if (confirmed != true) return;
 
     try {
+      await ProfileCache.clear();
       await supabase.auth.signOut();
     } catch (e) {
       _showMessage('Không thể đăng xuất: $e');
@@ -453,7 +447,7 @@ class _AccountPageState extends State<AccountPage> {
       body: _loading
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
-              onRefresh: _loadProfile,
+              onRefresh: () => _loadProfile(forceNetwork: true),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(16),

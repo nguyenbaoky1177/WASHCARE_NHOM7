@@ -32,7 +32,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     final response = await supabase
         .from('profiles')
         .select()
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .timeout(const Duration(seconds: 5));
 
     return (response as List)
         .whereType<Map<String, dynamic>>()

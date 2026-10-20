@@ -101,7 +101,8 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     final result = await supabase
         .from('orders')
         .select('*, order_items(*, services(name, unit))')
-        .order('created_at', ascending: false);
+        .order('created_at', ascending: false)
+        .timeout(const Duration(seconds: 5));
 
     return (result as List)
         .whereType<Map<String, dynamic>>()

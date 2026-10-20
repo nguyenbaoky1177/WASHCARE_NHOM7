@@ -5,6 +5,8 @@ import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
 import '../core/notification_service.dart';
+import '../core/profile_cache.dart';
+import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'active_orders_page.dart';
@@ -105,55 +107,45 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _refresh() async {
     setState(() {
-      _loadAll();
+      _profileFuture = _loadProfile(forceNetwork: true);
+      _servicesFuture = _loadServices(forceNetwork: true);
+      _activeOrderFuture = _loadLatestActiveOrder();
+      _loadUnreadCount();
     });
     try {
       await Future.wait([_profileFuture, _servicesFuture, _activeOrderFuture]);
     } catch (_) {}
   }
 
-  Future<ProfileModel?> _loadProfile() async {
-    final user = supabase.auth.currentUser;
-    if (user == null) return null;
-
-    final response = await supabase
-        .from('profiles')
-        .select('id, full_name, phone, role, created_at')
-        .eq('id', user.id)
-        .maybeSingle();
-
-    if (response == null) return null;
-    return ProfileModel.fromJson(response);
+  Future<ProfileModel?> _loadProfile({bool forceNetwork = false}) async {
+    return await ProfileCache.getProfile(forceNetwork: forceNetwork);
   }
 
-  Future<List<ServiceModel>> _loadServices() async {
-    final response = await supabase
-        .from('services')
-        .select('id, name, description, price, unit, icon, is_active')
-        .eq('is_active', true)
-        .order('id');
-
-    return (response as List)
-        .whereType<Map<String, dynamic>>()
-        .map((e) => ServiceModel.fromJson(e))
-        .toList();
+  Future<List<ServiceModel>> _loadServices({bool forceNetwork = false}) async {
+    return await ServiceCache.getServices(forceNetwork: forceNetwork);
   }
 
   Future<OrderModel?> _loadLatestActiveOrder() async {
     final user = supabase.auth.currentUser;
     if (user == null) return null;
 
-    final response = await supabase
-        .from('orders')
-        .select('*, order_items(*, services(name, unit))')
-        .eq('user_id', user.id)
-        .inFilter('status', ['pending', 'confirmed', 'processing'])
-        .order('created_at', ascending: false)
-        .limit(1)
-        .maybeSingle();
+    try {
+      final response = await supabase
+          .from('orders')
+          .select('*, order_items(*, services(name, unit))')
+          .eq('user_id', user.id)
+          .inFilter('status', ['pending', 'confirmed', 'processing'])
+          .order('created_at', ascending: false)
+          .limit(1)
+          .maybeSingle()
+          .timeout(const Duration(seconds: 4));
 
-    if (response == null) return null;
-    return OrderModel.fromJson(response);
+      if (response == null) return null;
+      return OrderModel.fromJson(response);
+    } catch (e) {
+      debugPrint('HomePage._loadLatestActiveOrder error: $e');
+      return null;
+    }
   }
 
   Future<void> _callHotline() async {

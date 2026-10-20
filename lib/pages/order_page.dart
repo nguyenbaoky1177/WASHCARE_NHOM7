@@ -3,6 +3,8 @@ import 'package:shared_preferences/shared_preferences.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
+import '../core/profile_cache.dart';
+import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
 import '../core/vietqr_helper.dart';
 import '../models/models.dart';
@@ -58,20 +60,10 @@ class _OrderPageState extends State<OrderPage> {
 
   Future<void> _loadData() async {
     try {
-      final user = supabase.auth.currentUser;
-
-      if (user != null) {
-        final profileData = await supabase
-            .from('profiles')
-            .select('id, full_name, phone')
-            .eq('id', user.id)
-            .maybeSingle();
-
-        if (profileData != null) {
-          final profile = ProfileModel.fromJson(profileData);
-          _nameController.text = profile.fullName;
-          _phoneController.text = profile.phone ?? '';
-        }
+      final profile = await ProfileCache.getProfile();
+      if (profile != null) {
+        _nameController.text = profile.fullName;
+        _phoneController.text = profile.phone ?? '';
       }
 
       // Load saved address from local storage
@@ -81,16 +73,7 @@ class _OrderPageState extends State<OrderPage> {
         _addressController.text = _savedAddress;
       }
 
-      final result = await supabase
-          .from('services')
-          .select('id, name, description, price, unit, icon, is_active')
-          .eq('is_active', true)
-          .order('id');
-
-      _services = (result as List)
-          .whereType<Map<String, dynamic>>()
-          .map((item) => ServiceModel.fromJson(item))
-          .toList();
+      _services = await ServiceCache.getServices();
 
       for (final service in _services) {
         _quantities[service.id] = 0;
