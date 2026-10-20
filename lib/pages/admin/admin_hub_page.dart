@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/review_service.dart';
 import '../../core/supabase_client.dart';
 import '../../models/models.dart';
 import 'admin_orders_page.dart';
 import 'admin_services_page.dart';
+import 'admin_users_page.dart';
 
 class AdminHubPage extends StatefulWidget {
   const AdminHubPage({super.key});
@@ -25,6 +27,7 @@ class _AdminHubPageState extends State<AdminHubPage> {
           AdminDashboardView(),
           AdminOrdersPage(),
           AdminServicesPage(),
+          AdminUsersPage(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -51,6 +54,11 @@ class _AdminHubPageState extends State<AdminHubPage> {
             selectedIcon: Icon(Icons.category, color: darkBlue),
             label: 'Dịch vụ & Giá',
           ),
+          NavigationDestination(
+            icon: Icon(Icons.people_outline_rounded),
+            selectedIcon: Icon(Icons.people_rounded, color: darkBlue),
+            label: 'Người dùng',
+          ),
         ],
       ),
     );
@@ -66,11 +74,27 @@ class AdminDashboardView extends StatefulWidget {
 
 class _AdminDashboardViewState extends State<AdminDashboardView> {
   late Future<List<OrderModel>> _dashboardFuture;
+  double _csat = 4.9;
+  int _reviewCount = 0;
 
   @override
   void initState() {
     super.initState();
     _dashboardFuture = _loadData();
+    _loadCsat();
+  }
+
+  Future<void> _loadCsat() async {
+    try {
+      final avg = await ReviewService.getAverageRating();
+      final count = await ReviewService.getReviewCount();
+      if (mounted) {
+        setState(() {
+          _csat = avg;
+          _reviewCount = count;
+        });
+      }
+    } catch (_) {}
   }
 
   Future<List<OrderModel>> _loadData() async {
@@ -88,6 +112,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   Future<void> _refresh() async {
     final future = _loadData();
     setState(() => _dashboardFuture = future);
+    _loadCsat();
     try {
       await future;
     } catch (_) {}
@@ -249,6 +274,70 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+
+                // CSAT Card
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(18),
+                    border: Border.all(color: const Color(0xFFE4ECF5)),
+                  ),
+                  child: Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(14),
+                        ),
+                        child: const Icon(Icons.star_rounded, color: Colors.amber, size: 28),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Chỉ số hài lòng khách hàng (CSAT)',
+                              style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                            ),
+                            const SizedBox(height: 2),
+                            Row(
+                              children: [
+                                Text(
+                                  '${_csat.toStringAsFixed(1)} / 5.0',
+                                  style: const TextStyle(
+                                    fontSize: 20,
+                                    fontWeight: FontWeight.bold,
+                                    color: darkBlue,
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  decoration: BoxDecoration(
+                                    color: Colors.green.withValues(alpha: 0.12),
+                                    borderRadius: BorderRadius.circular(10),
+                                  ),
+                                  child: Text(
+                                    '${_reviewCount > 0 ? _reviewCount : 'Uy tín'} đánh giá',
+                                    style: const TextStyle(
+                                      fontSize: 11,
+                                      fontWeight: FontWeight.bold,
+                                      color: Colors.green,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
                 const SizedBox(height: 24),
 

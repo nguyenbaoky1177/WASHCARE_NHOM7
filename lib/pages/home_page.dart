@@ -4,9 +4,11 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
+import '../core/notification_service.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'active_orders_page.dart';
+import 'notifications_page.dart';
 import 'order_page.dart';
 
 class HomePage extends StatefulWidget {
@@ -20,6 +22,7 @@ class _HomePageState extends State<HomePage> {
   late Future<ProfileModel?> _profileFuture;
   late Future<List<ServiceModel>> _servicesFuture;
   late Future<OrderModel?> _activeOrderFuture;
+  int _unreadNotificationCount = 0;
 
   final PageController _bannerController = PageController();
   int _currentBannerIndex = 0;
@@ -80,6 +83,24 @@ class _HomePageState extends State<HomePage> {
     _profileFuture = _loadProfile();
     _servicesFuture = _loadServices();
     _activeOrderFuture = _loadLatestActiveOrder();
+    _loadUnreadCount();
+  }
+
+  Future<void> _loadUnreadCount() async {
+    final count = await NotificationService.getUnreadCount();
+    if (mounted) {
+      setState(() => _unreadNotificationCount = count);
+    }
+  }
+
+  Future<void> _openNotifications() async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(builder: (_) => const NotificationsPage()),
+    );
+    if (mounted) {
+      _loadUnreadCount();
+    }
   }
 
   Future<void> _refresh() async {
@@ -304,6 +325,41 @@ class _HomePageState extends State<HomePage> {
                 );
               },
             ),
+          ),
+          Stack(
+            clipBehavior: Clip.none,
+            children: [
+              IconButton(
+                tooltip: 'Thông báo',
+                onPressed: _openNotifications,
+                icon: const Icon(Icons.notifications_none_rounded, color: primaryBlue),
+              ),
+              if (_unreadNotificationCount > 0)
+                Positioned(
+                  right: 6,
+                  top: 6,
+                  child: Container(
+                    padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(
+                      color: Colors.redAccent,
+                      shape: BoxShape.circle,
+                    ),
+                    constraints: const BoxConstraints(
+                      minWidth: 16,
+                      minHeight: 16,
+                    ),
+                    child: Text(
+                      _unreadNotificationCount > 9 ? '9+' : '$_unreadNotificationCount',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 10,
+                        fontWeight: FontWeight.bold,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                ),
+            ],
           ),
           IconButton(
             tooltip: 'Hỗ trợ khách hàng',

@@ -2,9 +2,12 @@ import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../core/app_colors.dart';
+import '../core/notification_service.dart';
+import '../core/review_service.dart';
 import '../core/supabase_client.dart';
 import '../core/vietqr_helper.dart';
 import '../models/models.dart';
+import '../widgets/order_review_dialog.dart';
 
 class ActiveOrdersPage extends StatefulWidget {
   const ActiveOrdersPage({super.key});
@@ -18,6 +21,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   String _selectedFilter = 'all';
   final Set<String> _cancellingOrders = {};
   RealtimeChannel? _ordersChannel;
+  Map<int, ReviewModel> _reviews = {};
 
   static const Color _primary = primaryBlue;
   static const Color _background = Color(0xFFF4F7FB);
@@ -106,6 +110,11 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   behavior: SnackBarBehavior.floating,
                 ),
               );
+
+              final parsedOrderId = int.tryParse(orderId) ?? 0;
+              if (parsedOrderId > 0) {
+                NotificationService.notifyOrderStatusChange(parsedOrderId, newStatus);
+              }
             }
 
             _refreshOrders();
@@ -124,10 +133,27 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
         .eq('user_id', user.id)
         .order('created_at', ascending: false);
 
+    try {
+      _reviews = await ReviewService.getAllReviews();
+    } catch (_) {}
+
     return (result as List)
         .whereType<Map<String, dynamic>>()
         .map((item) => OrderModel.fromJson(item))
         .toList();
+  }
+
+  Future<void> _openReviewDialog(OrderModel order) async {
+    final updated = await OrderReviewDialog.show(
+      context,
+      order: order,
+      initialReview: _reviews[order.id],
+    );
+    if (updated != null && mounted) {
+      setState(() {
+        _reviews[order.id] = updated;
+      });
+    }
   }
 
   Future<void> _refreshOrders() async {
@@ -509,6 +535,88 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   ),
                 ),
               ),
+              if (order.isCompleted) ...[
+                const Divider(height: 24),
+                Builder(
+                  builder: (context) {
+                    final review = _reviews[order.id];
+                    if (review != null) {
+                      return Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.08),
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: Colors.amber.withValues(alpha: 0.3),
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            const Icon(
+                              Icons.star_rounded,
+                              color: Colors.amber,
+                              size: 22,
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Đã đánh giá: ${review.rating}★ (${review.ratingLabel})',
+                                    style: const TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.bold,
+                                      color: Color(0xFF8A5A00),
+                                    ),
+                                  ),
+                                  if (review.comment.isNotEmpty)
+                                    Text(
+                                      review.comment,
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: Colors.grey[700],
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                foregroundColor: Colors.amber[900],
+                              ),
+                              onPressed: () => _openReviewDialog(order),
+                              child: const Text('Sửa'),
+                            ),
+                          ],
+                        ),
+                      );
+                    }
+                    return SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: () => _openReviewDialog(order),
+                        icon: const Icon(Icons.star_outline_rounded, size: 18),
+                        label: const Text('Đánh giá chất lượng dịch vụ'),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.amber[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ],
               if (order.isPending) ...[
                 const Divider(height: 24),
                 SizedBox(
@@ -737,6 +845,7 @@ class OrderDetailPage extends StatefulWidget {
 class _OrderDetailPageState extends State<OrderDetailPage> {
   late OrderModel _order;
   RealtimeChannel? _detailChannel;
+  ReviewModel? _review;
 
   static const Color _primary = primaryBlue;
 
@@ -745,6 +854,29 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     super.initState();
     _order = widget.order;
     _setupOrderRealtime();
+    _loadReview();
+  }
+
+  Future<void> _loadReview() async {
+    final r = await ReviewService.getReviewForOrder(_order.id);
+    if (mounted) {
+      setState(() {
+        _review = r;
+      });
+    }
+  }
+
+  Future<void> _handleReview() async {
+    final res = await OrderReviewDialog.show(
+      context,
+      order: _order,
+      initialReview: _review,
+    );
+    if (res != null && mounted) {
+      setState(() {
+        _review = res;
+      });
+    }
   }
 
   @override
@@ -1219,6 +1351,130 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ],
             ),
           ),
+          if (_order.isCompleted) ...[
+            const SizedBox(height: 14),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: _review != null
+                      ? Colors.amber.withValues(alpha: 0.3)
+                      : const Color(0xFFE4ECF5),
+                ),
+              ),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          color: Colors.amber.withValues(alpha: 0.12),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: const Icon(
+                          Icons.stars_rounded,
+                          color: Colors.amber,
+                          size: 26,
+                        ),
+                      ),
+                      const SizedBox(width: 14),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              _review != null
+                                  ? 'Đánh giá của bạn (${_review!.rating}★)'
+                                  : 'Đánh giá dịch vụ',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 15,
+                                color: Color(0xFF24364B),
+                              ),
+                            ),
+                            const SizedBox(height: 3),
+                            Text(
+                              _review != null
+                                  ? _review!.ratingLabel
+                                  : 'Chia sẻ cảm nhận giúp WashCare nâng cao chất lượng',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      FilledButton(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.amber[700],
+                          foregroundColor: Colors.white,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 10,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        onPressed: _handleReview,
+                        child: Text(
+                          _review != null ? 'Sửa' : 'Đánh giá',
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  if (_review != null) ...[
+                    const Divider(height: 20),
+                    if (_review!.tags.isNotEmpty)
+                      Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: _review!.tags.map((tag) {
+                          return Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 10,
+                              vertical: 4,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.amber.withValues(alpha: 0.1),
+                              borderRadius: BorderRadius.circular(16),
+                            ),
+                            child: Text(
+                              '#$tag',
+                              style: TextStyle(
+                                fontSize: 11,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.amber[900],
+                              ),
+                            ),
+                          );
+                        }).toList(),
+                      ),
+                    if (_review!.comment.isNotEmpty) ...[
+                      const SizedBox(height: 8),
+                      Text(
+                        '"${_review!.comment}"',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          fontStyle: FontStyle.italic,
+                          color: Colors.black87,
+                        ),
+                      ),
+                    ],
+                  ],
+                ],
+              ),
+            ),
+          ],
           if (_order.isPending) ...[
             const SizedBox(height: 20),
             SizedBox(
