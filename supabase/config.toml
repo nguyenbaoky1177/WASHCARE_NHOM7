@@ -1,0 +1,7 @@
+project_id = "washcare"
+
+[functions.momo-payment]
+verify_jwt = false
+
+[functions.momo-callback]
+verify_jwt = false

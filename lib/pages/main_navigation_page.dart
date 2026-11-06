@@ -23,8 +23,12 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
       body: IndexedStack(
         index: _selectedIndex,
         children: [
-          _loadedTabs.contains(0) ? const HomePage() : const SizedBox.shrink(),
-          _loadedTabs.contains(1) ? const ActiveOrdersPage() : const SizedBox.shrink(),
+          _loadedTabs.contains(0)
+              ? HomePage(isVisible: _selectedIndex == 0)
+              : const SizedBox.shrink(),
+          _loadedTabs.contains(1)
+              ? ActiveOrdersPage(isVisible: _selectedIndex == 1)
+              : const SizedBox.shrink(),
           _loadedTabs.contains(2) ? const AccountPage() : const SizedBox.shrink(),
         ],
       ),

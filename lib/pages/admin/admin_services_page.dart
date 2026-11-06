@@ -100,7 +100,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                 validator: (val) {
                   if (val == null || val.trim().isEmpty) return 'Vui lòng nhập giá';
                   final numVal = double.tryParse(val.replaceAll('.', ''));
-                  if (numVal == null || numVal <= 0) return 'Giá không hợp lệ';
+                  if (numVal == null || !numVal.isFinite || numVal <= 0) return 'Giá không hợp lệ';
                   return null;
                 },
               ),
@@ -195,8 +195,13 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                             suffixText: 'đ',
                             border: OutlineInputBorder(),
                           ),
-                          validator: (v) =>
-                              v == null || double.tryParse(v) == null ? 'Giá lỗi' : null,
+                          validator: (v) {
+                            final price = double.tryParse(v?.trim() ?? '');
+                            if (price == null || !price.isFinite || price <= 0) {
+                              return 'Nhập giá lớn hơn 0';
+                            }
+                            return null;
+                          },
                         ),
                       ),
                       const SizedBox(width: 10),

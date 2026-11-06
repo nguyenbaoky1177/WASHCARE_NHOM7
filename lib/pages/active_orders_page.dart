@@ -1,16 +1,22 @@
+import '../core/order_status_tracker.dart';
+import '../core/request_timeout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../widgets/order_status_badge.dart';
 import '../core/app_colors.dart';
 import '../core/notification_service.dart';
 import '../core/review_service.dart';
 import '../core/supabase_client.dart';
-import '../core/vietqr_helper.dart';
+import '../widgets/momo_payment_card.dart';
 import '../models/models.dart';
 import '../widgets/order_review_dialog.dart';
 
 class ActiveOrdersPage extends StatefulWidget {
-  const ActiveOrdersPage({super.key});
+  const ActiveOrdersPage({super.key, this.isVisible = true});
+
+  final bool isVisible;
 
   @override
   State<ActiveOrdersPage> createState() => _ActiveOrdersPageState();
@@ -22,6 +28,9 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   final Set<String> _cancellingOrders = {};
   RealtimeChannel? _ordersChannel;
   Map<int, ReviewModel> _reviews = {};
+  final _statusTracker = OrderStatusTracker();
+  int _loadGeneration = 0;
+  int _eventRevision = 0;
 
   static const Color _primary = primaryBlue;
   static const Color _background = Color(0xFFF4F7FB);
@@ -31,6 +40,14 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     super.initState();
     _ordersFuture = _loadOrders();
     _setupRealtimeSubscription();
+  }
+
+  @override
+  void didUpdateWidget(covariant ActiveOrdersPage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isVisible && !oldWidget.isVisible) {
+      _refreshOrders();
+    }
   }
 
   @override
@@ -62,10 +79,15 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
           callback: (payload) {
             if (!mounted) return;
 
+            _eventRevision++;
             final eventType = payload.eventType;
             final newRecord = payload.newRecord;
 
-            if (eventType == PostgresChangeEvent.update && newRecord.isNotEmpty) {
+            if (eventType == PostgresChangeEvent.update &&
+                _statusTracker.recordUpdate(
+                  newRecord,
+                  oldRecord: payload.oldRecord,
+                )) {
               final newStatus = newRecord['status']?.toString() ?? '';
               final orderId = newRecord['id']?.toString() ?? '';
 
@@ -77,8 +99,11 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 case 'confirmed':
                   statusName = 'Đã xác nhận';
                   break;
-                case 'processing':
+                case 'washing':
                   statusName = 'Đang xử lý';
+                  break;
+                case 'delivering':
+                  statusName = 'Đang giao hàng';
                   break;
                 case 'completed':
                   statusName = 'Hoàn thành';
@@ -113,17 +138,26 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
 
               final parsedOrderId = int.tryParse(orderId) ?? 0;
               if (parsedOrderId > 0) {
-                NotificationService.notifyOrderStatusChange(parsedOrderId, newStatus);
+                NotificationService.notifyOrderStatusChange(
+                  parsedOrderId,
+                  newStatus,
+                );
               }
             }
 
             _refreshOrders();
           },
         )
-        .subscribe();
+        .subscribe((status, error) {
+          if (status == RealtimeSubscribeStatus.subscribed && mounted) {
+            _refreshOrders();
+          }
+        });
   }
 
   Future<List<OrderModel>> _loadOrders() async {
+    final generation = ++_loadGeneration;
+    final revision = _eventRevision;
     final user = supabase.auth.currentUser;
     if (user == null) return [];
 
@@ -134,7 +168,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
           .select('*, order_items(*, services(name, unit))')
           .eq('user_id', user.id)
           .order('created_at', ascending: false)
-          .timeout(const Duration(seconds: 5));
+          .timeout(supabaseRequestTimeout);
 
       final reviewsFuture = ReviewService.getAllReviews();
 
@@ -144,11 +178,20 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
           .map((item) => OrderModel.fromJson(item))
           .toList();
 
-      _reviews = results[1] as Map<int, ReviewModel>;
+      if (mounted && generation == _loadGeneration) {
+        _reviews = results[1] as Map<int, ReviewModel>;
+        if (revision == _eventRevision) {
+          _statusTracker.seed(
+            ordersList.map(
+              (order) => (id: order.id.toString(), status: order.status),
+            ),
+          );
+        }
+      }
       return ordersList;
     } catch (e) {
       debugPrint('ActiveOrdersPage._loadOrders error: $e');
-      return [];
+      rethrow;
     }
   }
 
@@ -210,14 +253,15 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _cancelOrder(OrderModel order) async {
-    if (!order.isPending) {
-      _showMessage('Chỉ có thể hủy đơn đang chờ xác nhận.');
+    if (!order.canCancel) {
+      _showMessage(
+        'Không thể hủy đơn ở trạng thái hiện tại. Hãy kiểm tra giao dịch MoMo nếu có.',
+      );
       return;
     }
 
@@ -235,9 +279,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
             child: const Text('Không'),
           ),
           FilledButton(
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.red,
-            ),
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(dialogContext, true),
             child: const Text('Xác nhận hủy'),
           ),
@@ -320,9 +362,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
           return ChoiceChip(
             selected: selected,
             showCheckmark: false,
-            label: Text(
-              '${filter.$2} (${_countOrders(orders, filter.$1)})',
-            ),
+            label: Text('${filter.$2} (${_countOrders(orders, filter.$1)})'),
             selectedColor: _primary,
             backgroundColor: Colors.white,
             side: BorderSide(
@@ -347,10 +387,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     await Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => OrderDetailPage(
-          order: order,
-          onCancel: () => _cancelOrder(order),
-        ),
+        builder: (_) =>
+            OrderDetailPage(order: order, onCancel: () => _cancelOrder(order)),
       ),
     );
 
@@ -462,9 +500,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               const SizedBox(height: 10),
               _infoRow(
                 Icons.location_on_outlined,
-                order.address.isNotEmpty
-                    ? order.address
-                    : 'Chưa có địa chỉ',
+                order.address.isNotEmpty ? order.address : 'Chưa có địa chỉ',
               ),
               const SizedBox(height: 16),
               const Text(
@@ -509,10 +545,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 children: [
                   const Text(
                     'Tổng thanh toán',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w600,
-                      fontSize: 14,
-                    ),
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   Flexible(
                     child: Text(
@@ -626,7 +659,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   },
                 ),
               ],
-              if (order.isPending) ...[
+              if (order.canCancel) ...[
                 const Divider(height: 24),
                 SizedBox(
                   width: double.infinity,
@@ -636,14 +669,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                         ? const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                            ),
+                            child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.cancel_outlined),
-                    label: Text(
-                      cancelling ? 'Đang hủy...' : 'Hủy đơn hàng',
-                    ),
+                    label: Text(cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.redAccent),
@@ -683,10 +712,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
         const Center(
           child: Text(
             'Chưa có đơn hàng phù hợp',
-            style: TextStyle(
-              fontSize: 17,
-              fontWeight: FontWeight.w600,
-            ),
+            style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: 8),
@@ -769,13 +795,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    Text(
-                      '${snapshot.error}',
+                    const Text(
+                      'Vui lòng kiểm tra kết nối Internet và thử lại.',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        color: Colors.black54,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.black54),
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
@@ -804,10 +827,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'Theo dõi đơn giặt ủi của bạn (cập nhật trực tiếp)',
-                        style: TextStyle(
-                          fontSize: 14,
-                          color: Colors.black54,
-                        ),
+                        style: TextStyle(fontSize: 14, color: Colors.black54),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -866,6 +886,20 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
     _loadReview();
   }
 
+  Future<void> _reloadOrder() async {
+    try {
+      final row = await supabase
+          .from('orders')
+          .select('*, order_items(*, services(name, unit))')
+          .eq('id', _order.id)
+          .single()
+          .timeout(supabaseRequestTimeout);
+      if (mounted) setState(() => _order = OrderModel.fromJson(row));
+    } catch (error) {
+      debugPrint('Reload order failed: $error');
+    }
+  }
+
   Future<void> _loadReview() async {
     final r = await ReviewService.getReviewForOrder(_order.id);
     if (mounted) {
@@ -913,23 +947,13 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ),
           callback: (_) async {
             if (!mounted) return;
-
-            final refreshed = await supabase
-                .from('orders')
-                .select('*, order_items(*, services(name, unit))')
-                .eq('id', _order.id)
-                .maybeSingle();
-
-            if (refreshed != null && mounted) {
-              final newOrder = OrderModel.fromJson(refreshed);
-              setState(() {
-                _order = newOrder;
-              });
-
+            final oldStatus = _order.status;
+            await _reloadOrder();
+            if (mounted && oldStatus != _order.status) {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
                   content: Text(
-                    'Trạng thái đơn hàng vừa cập nhật: ${newOrder.statusDisplayName}',
+                    'Trạng thái đơn hàng vừa cập nhật: ${_order.statusDisplayName}',
                   ),
                   duration: const Duration(seconds: 3),
                   behavior: SnackBarBehavior.floating,
@@ -938,7 +962,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             }
           },
         )
-        .subscribe();
+        .subscribe((status, error) {
+          if (status == RealtimeSubscribeStatus.subscribed && mounted) {
+            _reloadOrder();
+          }
+        });
   }
 
   int _currentStepIndex(String status) {
@@ -947,10 +975,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         return 0;
       case 'confirmed':
         return 1;
-      case 'processing':
+      case 'washing':
         return 2;
-      case 'completed':
+      case 'delivering':
         return 3;
+      case 'completed':
+        return 4;
       default:
         return 0;
     }
@@ -1001,6 +1031,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       ('Chờ duyệt', Icons.receipt_long),
       ('Tiếp nhận', Icons.check_circle_outline),
       ('Đang giặt', Icons.local_laundry_service),
+      ('Đang giao', Icons.local_shipping),
       ('Hoàn thành', Icons.task_alt),
     ];
 
@@ -1054,7 +1085,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       color: isPassed ? _primary : const Color(0xFFF1F5F9),
                       shape: BoxShape.circle,
                       border: isCurrent
-                          ? Border.all(color: _primary.withValues(alpha: 0.4), width: 4)
+                          ? Border.all(
+                              color: _primary.withValues(alpha: 0.4),
+                              width: 4,
+                            )
                           : null,
                     ),
                     child: Icon(
@@ -1068,8 +1102,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     stepTitle,
                     style: TextStyle(
                       fontSize: 11,
-                      fontWeight:
-                          isCurrent ? FontWeight.bold : FontWeight.w500,
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
                       color: isCurrent
                           ? _primary
                           : (isPassed ? Colors.black87 : Colors.black45),
@@ -1092,10 +1125,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         children: [
           SizedBox(
             width: 125,
-            child: Text(
-              title,
-              style: const TextStyle(color: Colors.black54),
-            ),
+            child: Text(title, style: const TextStyle(color: Colors.black54)),
           ),
           Expanded(
             child: Text(
@@ -1170,33 +1200,15 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     ),
                   ),
                   const SizedBox(height: 12),
-                  Container(
+                  OrderStatusBadge(
+                    order: _order,
+                    showIcon: true,
                     padding: const EdgeInsets.symmetric(
                       horizontal: 14,
                       vertical: 9,
                     ),
-                    decoration: BoxDecoration(
-                      color: _order.statusColor.withValues(alpha: 0.10),
-                      borderRadius: BorderRadius.circular(22),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Icon(
-                          _order.statusIcon,
-                          color: _order.statusColor,
-                          size: 16,
-                        ),
-                        const SizedBox(width: 6),
-                        Text(
-                          _order.statusDisplayName,
-                          style: TextStyle(
-                            color: _order.statusColor,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                      ],
-                    ),
+                    radius: 22,
+                    fontSize: null,
                   ),
                   const Divider(height: 32),
                   _detailRow('Mã đơn', '#${_order.id}'),
@@ -1307,59 +1319,11 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ),
             ),
           ),
-          const SizedBox(height: 14),
-          Container(
-            padding: const EdgeInsets.all(16),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(18),
-              border: Border.all(color: const Color(0xFFE4ECF5)),
-            ),
-            child: Row(
-              children: [
-                Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: BoxDecoration(
-                    color: paleBlue,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: const Icon(Icons.qr_code_2, color: primaryBlue, size: 28),
-                ),
-                const SizedBox(width: 14),
-                const Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Chuyển khoản VietQR',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: darkBlue),
-                      ),
-                      SizedBox(height: 3),
-                      Text(
-                        'Quét mã để tự động điền tiền & nội dung',
-                        style: TextStyle(fontSize: 12, color: Colors.black54),
-                      ),
-                    ],
-                  ),
-                ),
-                FilledButton(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: primaryBlue,
-                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                  ),
-                  onPressed: () {
-                    VietQrHelper.showPaymentDialog(
-                      context: context,
-                      orderId: _order.id,
-                      amount: _order.totalPrice,
-                    );
-                  },
-                  child: const Text('Xem mã QR', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
-                ),
-              ],
-            ),
-          ),
+          if (['momo', 'momo_demo'].contains(_order.paymentMethod) &&
+              !_order.isCancelled) ...[
+            const SizedBox(height: 14),
+            MomoPaymentCard(order: _order, onClosed: _reloadOrder),
+          ],
           if (_order.isCompleted) ...[
             const SizedBox(height: 14),
             Container(
@@ -1407,9 +1371,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             ),
                             const SizedBox(height: 3),
                             Text(
-                              _review != null
-                                  ? _review!.ratingLabel
-                                  : 'Chia sẻ cảm nhận giúp WashCare nâng cao chất lượng',
+                              _review != null ? _review!.ratingLabel : 'Chia sẻ cảm nhận giúp WashCare nâng cao chất lượng',
                               style: const TextStyle(
                                 fontSize: 12,
                                 color: Colors.black54,
@@ -1484,7 +1446,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ),
             ),
           ],
-          if (_order.isPending) ...[
+          if (_order.canCancel) ...[
             const SizedBox(height: 20),
             SizedBox(
               width: double.infinity,
@@ -1507,10 +1469,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             const Text(
               'Bạn chỉ có thể hủy đơn khi đơn đang chờ xác nhận.',
               textAlign: TextAlign.center,
-              style: TextStyle(
-                color: Colors.black54,
-                fontSize: 12,
-              ),
+              style: TextStyle(color: Colors.black54, fontSize: 12),
             ),
           ],
           const SizedBox(height: 24),

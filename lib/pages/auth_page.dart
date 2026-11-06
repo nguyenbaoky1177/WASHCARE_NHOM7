@@ -88,7 +88,17 @@ class _AuthPageState extends State<AuthPage> {
         _showMessage('Đăng nhập thành công!');
       }
     } on AuthException catch (e) {
-      _showMessage(e.message);
+      if (e.code == 'invalid_credentials' ||
+          e.message.toLowerCase() == 'invalid login credentials') {
+        _showMessage(
+          'Email hoặc mật khẩu không đúng. Vui lòng kiểm tra lại '
+          'hoặc chọn Quên mật khẩu để đặt lại.',
+        );
+      } else if (e.code == 'email_not_confirmed') {
+        _showMessage('Vui lòng xác nhận email trước khi đăng nhập.');
+      } else {
+        _showMessage(e.message);
+      }
     } catch (e) {
       _showMessage('Có lỗi xảy ra: $e');
     } finally {

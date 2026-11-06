@@ -1,3 +1,4 @@
+import '../core/request_timeout.dart';
 import 'dart:async';
 
 import 'package:flutter/material.dart';
@@ -14,7 +15,9 @@ import 'notifications_page.dart';
 import 'order_page.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  const HomePage({super.key, this.isVisible = true});
+
+  final bool isVisible;
 
   @override
   State<HomePage> createState() => _HomePageState();
@@ -59,6 +62,14 @@ class _HomePageState extends State<HomePage> {
     super.initState();
     _loadAll();
     _startBannerAutoScroll();
+  }
+
+  @override
+  void didUpdateWidget(covariant HomePage oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.isVisible && !oldWidget.isVisible) {
+      _refresh();
+    }
   }
 
   @override
@@ -134,17 +145,17 @@ class _HomePageState extends State<HomePage> {
           .from('orders')
           .select('*, order_items(*, services(name, unit))')
           .eq('user_id', user.id)
-          .inFilter('status', ['pending', 'confirmed', 'processing'])
+          .inFilter('status', ['pending', 'confirmed', 'washing', 'delivering'])
           .order('created_at', ascending: false)
           .limit(1)
           .maybeSingle()
-          .timeout(const Duration(seconds: 4));
+          .timeout(supabaseRequestTimeout);
 
       if (response == null) return null;
       return OrderModel.fromJson(response);
     } catch (e) {
       debugPrint('HomePage._loadLatestActiveOrder error: $e');
-      return null;
+      rethrow;
     }
   }
 
@@ -172,6 +183,13 @@ class _HomePageState extends State<HomePage> {
               FutureBuilder<OrderModel?>(
                 future: _activeOrderFuture,
                 builder: (context, snapshot) {
+                  if (snapshot.hasError) {
+                    return ListTile(
+                      title: const Text('Chưa tải được đơn đang xử lý.'),
+                      subtitle: const Text('Kiểm tra kết nối và thử lại.'),
+                      trailing: TextButton(onPressed: _refresh, child: const Text('Thử lại')),
+                    );
+                  }
                   final activeOrder = snapshot.data;
                   if (activeOrder == null) return const SizedBox.shrink();
                   return _buildActiveOrderLivePill(activeOrder);
@@ -214,9 +232,7 @@ class _HomePageState extends State<HomePage> {
                       onPressed: () async {
                         final placed = await Navigator.push<bool>(
                           context,
-                          MaterialPageRoute(
-                            builder: (_) => const OrderPage(),
-                          ),
+                          MaterialPageRoute(builder: (_) => const OrderPage()),
                         );
                         if (placed == true && context.mounted) {
                           _refresh();
@@ -224,8 +240,13 @@ class _HomePageState extends State<HomePage> {
                       },
                       style: FilledButton.styleFrom(
                         backgroundColor: primaryBlue,
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 14,
+                          vertical: 8,
+                        ),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                       icon: const Icon(Icons.add, size: 16),
                       label: const Text('Đặt đơn'),
@@ -290,7 +311,11 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.location_on, size: 13, color: primaryBlue),
+                        const Icon(
+                          Icons.location_on,
+                          size: 13,
+                          color: primaryBlue,
+                        ),
                         const SizedBox(width: 3),
                         const Text(
                           'Giao nhận tận nơi',
@@ -324,7 +349,10 @@ class _HomePageState extends State<HomePage> {
               IconButton(
                 tooltip: 'Thông báo',
                 onPressed: _openNotifications,
-                icon: const Icon(Icons.notifications_none_rounded, color: primaryBlue),
+                icon: const Icon(
+                  Icons.notifications_none_rounded,
+                  color: primaryBlue,
+                ),
               ),
               if (_unreadNotificationCount > 0)
                 Positioned(
@@ -432,10 +460,8 @@ class _HomePageState extends State<HomePage> {
               await Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => OrderDetailPage(
-                    order: order,
-                    onCancel: () async {},
-                  ),
+                  builder: (_) =>
+                      OrderDetailPage(order: order, onCancel: () async {}),
                 ),
               );
               _refresh();
@@ -443,7 +469,10 @@ class _HomePageState extends State<HomePage> {
             child: const Row(
               mainAxisSize: MainAxisSize.min,
               children: [
-                Text('Theo dõi', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+                Text(
+                  'Theo dõi',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                ),
                 Icon(Icons.chevron_right, size: 16),
               ],
             ),
@@ -457,7 +486,7 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         SizedBox(
-          height: 140,
+          height: 165,
           child: PageView.builder(
             controller: _bannerController,
             itemCount: _promoBanners.length,
@@ -494,7 +523,10 @@ class _HomePageState extends State<HomePage> {
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
                           Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 8,
+                              vertical: 3,
+                            ),
                             decoration: BoxDecoration(
                               color: Colors.white.withValues(alpha: 0.2),
                               borderRadius: BorderRadius.circular(8),
@@ -521,12 +553,19 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 4),
                           Text(
                             b['subtitle'].toString(),
-                            style: const TextStyle(color: Colors.white70, fontSize: 11),
+                            style: const TextStyle(
+                              color: Colors.white70,
+                              fontSize: 11,
+                            ),
                           ),
                         ],
                       ),
                     ),
-                    Icon(b['icon'] as IconData, size: 48, color: Colors.white.withValues(alpha: 0.3)),
+                    Icon(
+                      b['icon'] as IconData,
+                      size: 48,
+                      color: Colors.white.withValues(alpha: 0.3),
+                    ),
                   ],
                 ),
               );
@@ -557,9 +596,19 @@ class _HomePageState extends State<HomePage> {
   Widget _buildCategoryShortcuts() {
     final categories = [
       ('Giặt sấy', Icons.local_laundry_service, paleBlue, primaryBlue),
-      ('Giặt hấp', Icons.dry_cleaning, const Color(0xFFF3E8FF), const Color(0xFF9333EA)),
+      (
+        'Giặt hấp',
+        Icons.dry_cleaning,
+        const Color(0xFFF3E8FF),
+        const Color(0xFF9333EA),
+      ),
       ('Ủi / Là', Icons.iron, const Color(0xFFFEF3C7), const Color(0xFFD97706)),
-      ('Vệ sinh giày', Icons.directions_walk, const Color(0xFFDCFCE7), const Color(0xFF16A34A)),
+      (
+        'Vệ sinh giày',
+        Icons.directions_walk,
+        const Color(0xFFDCFCE7),
+        const Color(0xFF16A34A),
+      ),
     ];
 
     return Padding(
@@ -589,7 +638,11 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 6),
                 Text(
                   c.$1,
-                  style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: darkBlue),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    fontWeight: FontWeight.w600,
+                    color: darkBlue,
+                  ),
                 ),
               ],
             ),
@@ -613,11 +666,23 @@ class _HomePageState extends State<HomePage> {
         if (snapshot.hasError) {
           return Padding(
             padding: const EdgeInsets.all(18),
-            child: Text('Lỗi tải dịch vụ: ${snapshot.error}', textAlign: TextAlign.center),
+            child: Column(
+              children: [
+                const Text('Không tải được dịch vụ. Vui lòng kiểm tra kết nối.'),
+                TextButton(onPressed: _refresh, child: const Text('Thử lại')),
+              ],
+            ),
           );
         }
 
         final services = snapshot.data ?? [];
+        if (services.isEmpty) {
+          return const Padding(
+            padding: EdgeInsets.all(18),
+            child: Text('Cửa hàng hiện chưa có dịch vụ đang hoạt động.'),
+          );
+        }
+
 
         return Padding(
           padding: const EdgeInsets.symmetric(horizontal: 18),
@@ -647,7 +712,11 @@ class _HomePageState extends State<HomePage> {
                         color: paleBlue,
                         borderRadius: BorderRadius.circular(16),
                       ),
-                      child: Icon(service.iconData, size: 28, color: primaryBlue),
+                      child: Icon(
+                        service.iconData,
+                        size: 28,
+                        color: primaryBlue,
+                      ),
                     ),
                     const SizedBox(width: 14),
                     Expanded(
@@ -668,7 +737,10 @@ class _HomePageState extends State<HomePage> {
                               service.description,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(color: Colors.grey, fontSize: 12),
+                              style: const TextStyle(
+                                color: Colors.grey,
+                                fontSize: 12,
+                              ),
                             ),
                           ],
                           const SizedBox(height: 6),
@@ -684,7 +756,11 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(Icons.add_circle, color: primaryBlue, size: 30),
+                      icon: const Icon(
+                        Icons.add_circle,
+                        color: primaryBlue,
+                        size: 30,
+                      ),
                       tooltip: 'Đặt ngay',
                       onPressed: () {
                         Navigator.push(
@@ -705,10 +781,26 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildQualityCommitments() {
     final commitments = [
-      ('Giặt riêng từng mẻ', 'Không trộn lẫn quần áo của khách khác', Icons.verified_user_outlined),
-      ('Nước giặt sinh học', 'An toàn tuyệt đối cho da nhạy cảm & em bé', Icons.eco_outlined),
-      ('Giao nhận 2 giờ', 'Đúng giờ hẹn, shipper thân thiện chu đáo', Icons.timer_outlined),
-      ('Bảo hiểm trang phục', 'Đền bù 100% nếu xảy ra hư hao thất lạc', Icons.shield_outlined),
+      (
+        'Giặt riêng từng mẻ',
+        'Không trộn lẫn quần áo của khách khác',
+        Icons.verified_user_outlined,
+      ),
+      (
+        'Nước giặt sinh học',
+        'An toàn tuyệt đối cho da nhạy cảm & em bé',
+        Icons.eco_outlined,
+      ),
+      (
+        'Giao nhận 2 giờ',
+        'Đúng giờ hẹn, shipper thân thiện chu đáo',
+        Icons.timer_outlined,
+      ),
+      (
+        'Bảo hiểm trang phục',
+        'Đền bù 100% nếu xảy ra hư hao thất lạc',
+        Icons.shield_outlined,
+      ),
     ];
 
     return Container(
@@ -751,11 +843,18 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Text(
                           c.$1,
-                          style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13, color: darkBlue),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 13,
+                            color: darkBlue,
+                          ),
                         ),
                         Text(
                           c.$2,
-                          style: const TextStyle(fontSize: 11, color: Colors.black54),
+                          style: const TextStyle(
+                            fontSize: 11,
+                            color: Colors.black54,
+                          ),
                         ),
                       ],
                     ),
@@ -786,7 +885,11 @@ class _HomePageState extends State<HomePage> {
               color: Colors.white,
               shape: BoxShape.circle,
             ),
-            child: const Icon(Icons.phone_in_talk, color: primaryBlue, size: 22),
+            child: const Icon(
+              Icons.phone_in_talk,
+              color: primaryBlue,
+              size: 22,
+            ),
           ),
           const SizedBox(width: 12),
           const Expanded(
@@ -795,11 +898,17 @@ class _HomePageState extends State<HomePage> {
               children: [
                 Text(
                   'Tổng đài hỗ trợ 24/7',
-                  style: TextStyle(fontWeight: FontWeight.bold, color: darkBlue, fontSize: 14),
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                    fontSize: 14,
+                  ),
                 ),
                 SizedBox(height: 2),
-                Text('Hotline: 1900 1234 (Miễn phí cuộc gọi)',
-                    style: TextStyle(fontSize: 12, color: Colors.black54)),
+                Text(
+                  'Hotline: 1900 1234 (Miễn phí cuộc gọi)',
+                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                ),
               ],
             ),
           ),
@@ -808,10 +917,15 @@ class _HomePageState extends State<HomePage> {
               foregroundColor: primaryBlue,
               side: const BorderSide(color: primaryBlue),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(10),
+              ),
             ),
             onPressed: _callHotline,
-            child: const Text('Gọi ngay', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+            child: const Text(
+              'Gọi ngay',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
+            ),
           ),
         ],
       ),

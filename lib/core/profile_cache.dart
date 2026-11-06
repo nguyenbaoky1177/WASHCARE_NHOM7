@@ -1,3 +1,4 @@
+import 'request_timeout.dart';
 import 'dart:convert';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -30,6 +31,7 @@ class ProfileCache {
         if (raw != null) {
           final decoded = jsonDecode(raw) as Map<String, dynamic>;
           final profile = ProfileModel.fromJson(decoded);
+          if (profile.id != user.id || supabase.auth.currentUser?.id != user.id) return null;
           _memoryProfile = profile;
           _fetchAndUpdateInBackground(user.id);
           return profile;
@@ -48,10 +50,11 @@ class ProfileCache {
           .select('id, full_name, phone, role, created_at')
           .eq('id', userId)
           .maybeSingle()
-          .timeout(const Duration(seconds: 4));
+          .timeout(supabaseRequestTimeout);
 
       if (response != null) {
         final profile = ProfileModel.fromJson(response);
+        if (supabase.auth.currentUser?.id != userId) return null;
         _memoryProfile = profile;
         _saveToCache(profile);
         return profile;
@@ -59,15 +62,17 @@ class ProfileCache {
     } catch (e) {
       debugPrint('ProfileCache fetch error: $e');
     }
-    return _memoryProfile;
+    return _memoryProfile?.id == userId ? _memoryProfile : null;
   }
 
   static void _fetchAndUpdateInBackground(String userId) {
-    _fetchFromSupabase(userId).then((profile) {
-      if (profile != null) {
-        _memoryProfile = profile;
-      }
-    }).catchError((_) {});
+    _fetchFromSupabase(userId)
+        .then((profile) {
+          if (profile != null && supabase.auth.currentUser?.id == userId) {
+            _memoryProfile = profile;
+          }
+        })
+        .catchError((_) {});
   }
 
   static Future<void> updateCache(ProfileModel profile) async {

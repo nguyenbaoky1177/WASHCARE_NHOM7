@@ -8,11 +8,7 @@ class OrderReviewDialog extends StatefulWidget {
   final OrderModel order;
   final ReviewModel? initialReview;
 
-  const OrderReviewDialog({
-    super.key,
-    required this.order,
-    this.initialReview,
-  });
+  const OrderReviewDialog({super.key, required this.order, this.initialReview});
 
   static Future<ReviewModel?> show(
     BuildContext context, {
@@ -23,10 +19,8 @@ class OrderReviewDialog extends StatefulWidget {
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (ctx) => OrderReviewDialog(
-        order: order,
-        initialReview: initialReview,
-      ),
+      builder: (ctx) =>
+          OrderReviewDialog(order: order, initialReview: initialReview),
     );
   }
 
@@ -61,7 +55,9 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
   void initState() {
     super.initState();
     _rating = widget.initialReview?.rating ?? 5;
-    _commentController = TextEditingController(text: widget.initialReview?.comment ?? '');
+    _commentController = TextEditingController(
+      text: widget.initialReview?.comment ?? '',
+    );
     _selectedTags = Set<String>.from(widget.initialReview?.tags ?? []);
   }
 
@@ -111,6 +107,16 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
 
     if (mounted) {
       setState(() => _isSubmitting = false);
+      if (!success) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Chưa gửi được đánh giá. Vui lòng kiểm tra kết nối và thử lại.',
+            ),
+          ),
+        );
+        return;
+      }
       if (success) {
         Navigator.pop(context, review);
         ScaffoldMessenger.of(context).showSnackBar(
@@ -124,7 +130,9 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
             ),
             backgroundColor: AppColors.primary,
             behavior: SnackBarBehavior.floating,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(10),
+            ),
           ),
         );
       }
@@ -184,10 +192,7 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
                       const SizedBox(height: 2),
                       Text(
                         'Đơn hàng #${widget.order.id}',
-                        style: TextStyle(
-                          fontSize: 13,
-                          color: Colors.grey[600],
-                        ),
+                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
                       ),
                     ],
                   ),
@@ -309,7 +314,10 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(color: AppColors.primary, width: 1.5),
+                  borderSide: const BorderSide(
+                    color: AppColors.primary,
+                    width: 1.5,
+                  ),
                 ),
                 contentPadding: const EdgeInsets.all(12),
               ),

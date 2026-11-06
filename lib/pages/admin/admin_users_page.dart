@@ -1,3 +1,4 @@
+import '../../core/request_timeout.dart';
 import 'package:flutter/material.dart';
 import '../../core/app_colors.dart';
 import '../../core/supabase_client.dart';
@@ -33,7 +34,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         .from('profiles')
         .select()
         .order('created_at', ascending: false)
-        .timeout(const Duration(seconds: 5));
+        .timeout(supabaseRequestTimeout);
 
     return (response as List)
         .whereType<Map<String, dynamic>>()
@@ -103,18 +104,26 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
         return StatefulBuilder(
           builder: (context, setDialogState) {
             return AlertDialog(
-              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(20),
+              ),
               title: Row(
                 children: [
                   CircleAvatar(
                     backgroundColor: primaryBlue.withAlpha(25),
-                    child: const Icon(Icons.manage_accounts_rounded, color: primaryBlue),
+                    child: const Icon(
+                      Icons.manage_accounts_rounded,
+                      color: primaryBlue,
+                    ),
                   ),
                   const SizedBox(width: 12),
                   const Expanded(
                     child: Text(
                       'Phân quyền tài khoản',
-                      style: TextStyle(fontSize: 17, fontWeight: FontWeight.bold),
+                      style: TextStyle(
+                        fontSize: 17,
+                        fontWeight: FontWeight.bold,
+                      ),
                     ),
                   ),
                 ],
@@ -124,13 +133,27 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    user.fullName.isNotEmpty ? user.fullName : 'Tài khoản #${user.id.substring(0, 8)}',
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                    user.fullName.isNotEmpty
+                        ? user.fullName
+                        : 'Tài khoản #${user.id.substring(0, 8)}',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 15,
+                    ),
                   ),
                   if (user.phone != null && user.phone!.isNotEmpty)
-                    Text('SĐT: ${user.phone}', style: const TextStyle(color: Colors.black54, fontSize: 13)),
+                    Text(
+                      'SĐT: ${user.phone}',
+                      style: const TextStyle(
+                        color: Colors.black54,
+                        fontSize: 13,
+                      ),
+                    ),
                   const SizedBox(height: 16),
-                  const Text('Chọn vai trò mới:', style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13)),
+                  const Text(
+                    'Chọn vai trò mới:',
+                    style: TextStyle(fontWeight: FontWeight.w600, fontSize: 13),
+                  ),
                   const SizedBox(height: 8),
                   ...[
                     (
@@ -139,13 +162,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       'Đặt đơn, theo dõi trạng thái, đánh giá',
                       Icons.person_rounded,
                       const Color(0xFF16845B),
-                    ),
-                    (
-                      'staff',
-                      'Nhân viên (Staff)',
-                      'Cập nhật giặt sấy, hoàn tất đơn',
-                      Icons.badge_rounded,
-                      Colors.indigo,
                     ),
                     (
                       'admin',
@@ -161,7 +177,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       borderRadius: BorderRadius.circular(12),
                       child: Container(
                         margin: const EdgeInsets.only(bottom: 8),
-                        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 10,
+                        ),
                         decoration: BoxDecoration(
                           color: isSelected ? item.$5.withAlpha(20) : Colors.grey[50],
                           borderRadius: BorderRadius.circular(12),
@@ -188,7 +207,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                   ),
                                   Text(
                                     item.$3,
-                                    style: TextStyle(fontSize: 11.5, color: Colors.grey[600]),
+                                    style: TextStyle(
+                                      fontSize: 11.5,
+                                      color: Colors.grey[600],
+                                    ),
                                   ),
                                 ],
                               ),
@@ -224,33 +246,20 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
     if (newRole == null || newRole == user.role.toLowerCase() || !mounted) return;
 
-    // Cảnh báo nếu tự hạ quyền chính mình
     if (user.id == currentUserId && newRole != 'admin') {
-      final confirm = await showDialog<bool>(
-        context: context,
-        builder: (ctx) => AlertDialog(
-          title: const Text('Xác nhận đổi quyền chính mình'),
-          content: const Text(
-            'Bạn đang hạ quyền tài khoản của chính mình. Sau khi hạ quyền, bạn sẽ mất quyền truy cập Admin Hub!',
-          ),
-          actions: [
-            TextButton(onPressed: () => Navigator.pop(ctx, false), child: const Text('Hủy')),
-            FilledButton(
-              style: FilledButton.styleFrom(backgroundColor: Colors.red),
-              onPressed: () => Navigator.pop(ctx, true),
-              child: const Text('Vẫn tiếp tục'),
-            ),
-          ],
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Không thể tự hạ quyền tài khoản đang đăng nhập.'),
         ),
       );
-      if (confirm != true) return;
+      return;
     }
 
     try {
-      await supabase
-          .from('profiles')
-          .update({'role': newRole})
-          .eq('id', user.id);
+      await supabase.rpc(
+        'admin_set_user_role',
+        params: {'p_user_id': user.id, 'p_role': newRole},
+      );
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -259,7 +268,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
               children: [
                 const Icon(Icons.check_circle_rounded, color: Colors.white),
                 const SizedBox(width: 8),
-                Text('Đã cập nhật vai trò của ${user.fullName} thành $newRole!'),
+                Text(
+                  'Đã cập nhật vai trò của ${user.fullName} thành $newRole!',
+                ),
               ],
             ),
             backgroundColor: AppColors.primary,
@@ -290,7 +301,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           children: [
             Icon(Icons.manage_accounts_rounded, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Quản lý Người dùng', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              'Quản lý Người dùng',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         backgroundColor: darkBlue,
@@ -317,11 +331,18 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 12),
                     Text('Lỗi: ${snapshot.error}', textAlign: TextAlign.center),
                     const SizedBox(height: 12),
-                    FilledButton(onPressed: _refresh, child: const Text('Thử lại')),
+                    FilledButton(
+                      onPressed: _refresh,
+                      child: const Text('Thử lại'),
+                    ),
                   ],
                 ),
               ),
@@ -331,9 +352,12 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           final allUsers = snapshot.data ?? [];
           final filteredUsers = _filterUsers(allUsers);
 
-          final adminCount = allUsers.where((u) => u.role.toLowerCase() == 'admin').length;
-          final staffCount = allUsers.where((u) => u.role.toLowerCase() == 'staff').length;
-          final customerCount = allUsers.where((u) => u.role.toLowerCase() == 'customer').length;
+          final adminCount = allUsers
+              .where((u) => u.role.toLowerCase() == 'admin')
+              .length;
+          final customerCount = allUsers
+              .where((u) => u.role.toLowerCase() == 'customer')
+              .length;
 
           return RefreshIndicator(
             onRefresh: _refresh,
@@ -344,19 +368,27 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                 Row(
                   children: [
                     Expanded(
-                      child: _statPill('Tổng số', allUsers.length.toString(), primaryBlue),
+                      child: _statPill(
+                        'Tổng số',
+                        allUsers.length.toString(),
+                        primaryBlue,
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: _statPill('Khách hàng', customerCount.toString(), const Color(0xFF16845B)),
+                      child: _statPill(
+                        'Khách hàng',
+                        customerCount.toString(),
+                        const Color(0xFF16845B),
+                      ),
                     ),
                     const SizedBox(width: 8),
                     Expanded(
-                      child: _statPill('Nhân viên', staffCount.toString(), Colors.indigo),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _statPill('Quản trị', adminCount.toString(), Colors.deepOrange),
+                      child: _statPill(
+                        'Quản trị',
+                        adminCount.toString(),
+                        Colors.deepOrange,
+                      ),
                     ),
                   ],
                 ),
@@ -382,7 +414,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                         : null,
                     filled: true,
                     fillColor: Colors.white,
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                    contentPadding: const EdgeInsets.symmetric(
+                      horizontal: 16,
+                      vertical: 12,
+                    ),
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
                       borderSide: const BorderSide(color: Color(0xFFE4ECF5)),
@@ -393,7 +428,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     ),
                     focusedBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(14),
-                      borderSide: const BorderSide(color: primaryBlue, width: 1.5),
+                      borderSide: const BorderSide(
+                        color: primaryBlue,
+                        width: 1.5,
+                      ),
                     ),
                   ),
                   onChanged: (val) {
@@ -411,7 +449,6 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                       const SizedBox(width: 8),
                       _roleChip('Khách hàng', 'customer', customerCount),
                       const SizedBox(width: 8),
-                      _roleChip('Nhân viên', 'staff', staffCount),
                       const SizedBox(width: 8),
                       _roleChip('Quản trị viên', 'admin', adminCount),
                     ],
@@ -431,16 +468,26 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     ),
                     child: Column(
                       children: [
-                        Icon(Icons.person_search_rounded, size: 54, color: Colors.grey[400]),
+                        Icon(
+                          Icons.person_search_rounded,
+                          size: 54,
+                          color: Colors.grey[400],
+                        ),
                         const SizedBox(height: 12),
                         const Text(
                           'Không tìm thấy người dùng phù hợp',
-                          style: TextStyle(fontWeight: FontWeight.w600, fontSize: 15),
+                          style: TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 15,
+                          ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           'Hãy thử thay đổi từ khóa hoặc bộ lọc vai trò',
-                          style: TextStyle(fontSize: 13, color: Colors.grey[500]),
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.grey[500],
+                          ),
                         ),
                       ],
                     ),
@@ -467,7 +514,11 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                 CircleAvatar(
                                   radius: 22,
                                   backgroundColor: roleColor.withAlpha(25),
-                                  child: Icon(roleIcon, color: roleColor, size: 24),
+                                  child: Icon(
+                                    roleIcon,
+                                    color: roleColor,
+                                    size: 24,
+                                  ),
                                 ),
                                 const SizedBox(width: 12),
                                 Expanded(
@@ -485,11 +536,18 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                       const SizedBox(height: 3),
                                       Row(
                                         children: [
-                                          Icon(Icons.phone_outlined, size: 13, color: Colors.grey[600]),
+                                          Icon(
+                                            Icons.phone_outlined,
+                                            size: 13,
+                                            color: Colors.grey[600],
+                                          ),
                                           const SizedBox(width: 4),
                                           Text(
                                             user.phone ?? 'Chưa cập nhật SĐT',
-                                            style: TextStyle(fontSize: 12, color: Colors.grey[600]),
+                                            style: TextStyle(
+                                              fontSize: 12,
+                                              color: Colors.grey[600],
+                                            ),
                                           ),
                                         ],
                                       ),
@@ -497,11 +555,16 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                   ),
                                 ),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 5),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: roleColor.withAlpha(20),
                                     borderRadius: BorderRadius.circular(20),
-                                    border: Border.all(color: roleColor.withAlpha(60)),
+                                    border: Border.all(
+                                      color: roleColor.withAlpha(60),
+                                    ),
                                   ),
                                   child: Text(
                                     user.roleDisplayName,
@@ -520,11 +583,18 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                               children: [
                                 Row(
                                   children: [
-                                    Icon(Icons.calendar_today_outlined, size: 13, color: Colors.grey[500]),
+                                    Icon(
+                                      Icons.calendar_today_outlined,
+                                      size: 13,
+                                      color: Colors.grey[500],
+                                    ),
                                     const SizedBox(width: 4),
                                     Text(
                                       'Tham gia: ${user.formattedCreatedAt}',
-                                      style: TextStyle(fontSize: 11.5, color: Colors.grey[600]),
+                                      style: TextStyle(
+                                        fontSize: 11.5,
+                                        color: Colors.grey[600],
+                                      ),
                                     ),
                                   ],
                                 ),
@@ -533,12 +603,26 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                     foregroundColor: primaryBlue,
                                     side: const BorderSide(color: primaryBlue),
                                     visualDensity: VisualDensity.compact,
-                                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 12,
+                                      vertical: 6,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(10),
+                                    ),
                                   ),
                                   onPressed: () => _changeUserRole(user),
-                                  icon: const Icon(Icons.edit_note_rounded, size: 16),
-                                  label: const Text('Phân quyền', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold)),
+                                  icon: const Icon(
+                                    Icons.edit_note_rounded,
+                                    size: 16,
+                                  ),
+                                  label: const Text(
+                                    'Phân quyền',
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
                                 ),
                               ],
                             ),

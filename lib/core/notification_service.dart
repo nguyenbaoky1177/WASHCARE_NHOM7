@@ -1,86 +1,76 @@
 import 'dart:convert';
+
 import 'package:flutter/foundation.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+
+import 'account_storage.dart';
 import '../models/notification_model.dart';
 
 class NotificationService {
-  static const String _prefKey = 'washcare_notifications_v1';
+  static List<NotificationModel> _decode(String? raw) {
+    if (raw == null) return _initialNotifications();
+    return (jsonDecode(raw) as List)
+        .whereType<Map<String, dynamic>>()
+        .map(NotificationModel.fromJson)
+        .toList();
+  }
 
-  /// Lấy danh sách thông báo (kèm seed mẫu ban đầu nếu trống)
   static Future<List<NotificationModel>> getNotifications() async {
+    final storage = AccountStorage.current;
+    if (storage == null) return [];
     try {
-      final prefs = await SharedPreferences.getInstance();
-      final raw = prefs.getString(_prefKey);
-      if (raw != null) {
-        final List list = jsonDecode(raw);
-        return list
-            .whereType<Map<String, dynamic>>()
-            .map((item) => NotificationModel.fromJson(item))
-            .toList();
-      } else {
-        // Khởi tạo các thông báo chào mừng & ưu đãi ban đầu
-        final initial = _initialNotifications();
-        await _saveNotifications(initial);
-        return initial;
-      }
-    } catch (e) {
-      debugPrint('NotificationService.getNotifications error: $e');
-      return _initialNotifications();
+      await storage.updateString(
+        'notifications',
+        (raw) =>
+            raw ??
+            jsonEncode(
+              _initialNotifications().map((item) => item.toJson()).toList(),
+            ),
+      );
+      return _decode(await storage.readString('notifications'));
+    } catch (error) {
+      debugPrint('Notification read failed: $error');
+      return [];
     }
   }
 
-  /// Thêm thông báo mới
-  static Future<void> addNotification(NotificationModel notification) async {
+  static Future<void> _update(
+    List<NotificationModel> Function(List<NotificationModel>) update,
+  ) async {
+    final storage = AccountStorage.current;
+    if (storage == null) return;
     try {
-      final list = await getNotifications();
-      // Tránh trùng lặp nếu cùng id
+      await storage.updateString('notifications', (raw) {
+        final updated = update(_decode(raw));
+        return jsonEncode(updated.map((item) => item.toJson()).toList());
+      });
+    } catch (error) {
+      debugPrint('Notification update failed: $error');
+    }
+  }
+
+  static Future<void> addNotification(NotificationModel notification) {
+    return _update((list) {
       list.removeWhere((item) => item.id == notification.id);
       list.insert(0, notification);
-
-      // Giới hạn tối đa 50 thông báo gần nhất
-      final trimmed = list.take(50).toList();
-      await _saveNotifications(trimmed);
-    } catch (e) {
-      debugPrint('NotificationService.addNotification error: $e');
-    }
+      return list.take(50).toList();
+    });
   }
 
-  /// Đánh dấu một thông báo đã đọc
-  static Future<void> markAsRead(String id) async {
-    try {
-      final list = await getNotifications();
-      final updated = list.map((item) {
-        if (item.id == id) {
-          return item.copyWith(isRead: true);
-        }
-        return item;
-      }).toList();
-      await _saveNotifications(updated);
-    } catch (e) {
-      debugPrint('NotificationService.markAsRead error: $e');
-    }
+  static Future<void> markAsRead(String id) {
+    return _update(
+      (list) => list
+          .map((item) => item.id == id ? item.copyWith(isRead: true) : item)
+          .toList(),
+    );
   }
 
-  /// Đánh dấu tất cả thông báo đã đọc
-  static Future<void> markAllAsRead() async {
-    try {
-      final list = await getNotifications();
-      final updated = list.map((item) => item.copyWith(isRead: true)).toList();
-      await _saveNotifications(updated);
-    } catch (e) {
-      debugPrint('NotificationService.markAllAsRead error: $e');
-    }
+  static Future<void> markAllAsRead() {
+    return _update(
+      (list) => list.map((item) => item.copyWith(isRead: true)).toList(),
+    );
   }
 
-  /// Xóa toàn bộ thông báo
-  static Future<void> clearAll() async {
-    try {
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.remove(_prefKey);
-    } catch (e) {
-      debugPrint('NotificationService.clearAll error: $e');
-    }
-  }
+  static Future<void> clearAll() => _update((_) => []);
 
   /// Đếm số thông báo chưa đọc
   static Future<int> getUnreadCount() async {
@@ -93,7 +83,10 @@ class NotificationService {
   }
 
   /// Tạo thông báo cập nhật trạng thái đơn hàng
-  static Future<void> notifyOrderStatusChange(int orderId, String newStatus) async {
+  static Future<void> notifyOrderStatusChange(
+    int orderId,
+    String newStatus,
+  ) async {
     String title = 'Cập nhật đơn hàng #$orderId';
     String message = 'Đơn hàng của bạn có tiến trình mới.';
 
@@ -106,9 +99,13 @@ class NotificationService {
         title = 'Đơn hàng #$orderId đã được xác nhận';
         message = 'Nhân viên WashCare đang chuẩn bị lấy đồ theo lịch hẹn.';
         break;
-      case 'processing':
+      case 'washing':
         title = 'Đơn hàng #$orderId đang giặt sấy';
         message = 'Trang phục của bạn đang được giặt tiệt trùng và sấy thơm.';
+        break;
+      case 'delivering':
+        title = 'Đơn hàng #$orderId đang giao đến bạn';
+        message = 'Đồ giặt đã sẵn sàng và đang được giao đến địa chỉ của bạn.';
         break;
       case 'completed':
         title = 'Đơn hàng #$orderId đã hoàn tất!';
@@ -131,12 +128,6 @@ class NotificationService {
     );
 
     await addNotification(notif);
-  }
-
-  static Future<void> _saveNotifications(List<NotificationModel> list) async {
-    final prefs = await SharedPreferences.getInstance();
-    final jsonString = jsonEncode(list.map((e) => e.toJson()).toList());
-    await prefs.setString(_prefKey, jsonString);
   }
 
   static List<NotificationModel> _initialNotifications() {

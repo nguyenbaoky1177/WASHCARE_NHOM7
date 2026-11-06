@@ -1,9 +1,59 @@
+import 'test_supabase.dart';
+
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:washcare/core/notification_service.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:washcare/core/app_colors.dart';
 import 'package:washcare/models/models.dart';
 
 void main() {
+  TestWidgetsFlutterBinding.ensureInitialized();
+  setUpAll(() async => initializeTestSupabase());
+  setUp(() async {
+    SharedPreferences.setMockInitialValues({});
+    await signInTestUser('customer-a');
+  });
+
+  test(
+    'notifications are isolated and concurrent writes are preserved',
+    () async {
+      await NotificationService.clearAll();
+      await Future.wait(
+        List.generate(
+          10,
+          (index) => NotificationService.addNotification(
+            NotificationModel(
+              id: 'private-$index',
+              title: 'A',
+              message: 'A',
+              type: 'system',
+              createdAt: DateTime.now(),
+            ),
+          ),
+        ),
+      );
+      expect((await NotificationService.getNotifications()).length, 10);
+      await signInTestUser('customer-b');
+      expect(
+        (await NotificationService.getNotifications()).where(
+          (item) => item.id.startsWith('private-'),
+        ),
+        isEmpty,
+      );
+      await signInTestUser('customer-a');
+      expect((await NotificationService.getNotifications()).length, 10);
+    },
+  );
+
+  test('Cleared notifications stay empty after reloading', () async {
+    SharedPreferences.setMockInitialValues({});
+    expect(await NotificationService.getNotifications(), isNotEmpty);
+    await NotificationService.clearAll();
+    expect(await NotificationService.getNotifications(), isEmpty);
+    expect(await NotificationService.getUnreadCount(), 0);
+  });
+
   group('NotificationModel Tests', () {
     test('fromJson and toJson roundtrip', () {
       final json = {

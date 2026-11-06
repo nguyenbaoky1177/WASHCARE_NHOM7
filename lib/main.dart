@@ -32,9 +32,7 @@ class WashCareApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       theme: ThemeData(
         useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: primaryBlue,
-        ),
+        colorScheme: ColorScheme.fromSeed(seedColor: primaryBlue),
         scaffoldBackgroundColor: backgroundColor,
         appBarTheme: const AppBarTheme(
           backgroundColor: primaryBlue,
@@ -44,21 +42,14 @@ class WashCareApp extends StatelessWidget {
         inputDecorationTheme: InputDecorationTheme(
           filled: true,
           fillColor: Colors.white,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
           enabledBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(
-              color: Color(0xFFDCE6F2),
-            ),
+            borderSide: const BorderSide(color: Color(0xFFDCE6F2)),
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(
-              color: primaryBlue,
-              width: 1.5,
-            ),
+            borderSide: const BorderSide(color: primaryBlue, width: 1.5),
           ),
         ),
       ),
@@ -86,16 +77,20 @@ class _AuthGateState extends State<AuthGate> {
         supabase.auth.onAuthStateChange.listen((authState) {
           if (!mounted) return;
 
-          if (authState.event == AuthChangeEvent.passwordRecovery) {
-            setState(() {
-              _isPasswordRecovery = true;
-            });
-          } else if (authState.event == AuthChangeEvent.signedOut) {
-            setState(() {
-              _isPasswordRecovery = false;
-            });
-          }
-        });
+        if (authState.event == AuthChangeEvent.passwordRecovery) {
+          setState(() {
+            _isPasswordRecovery = true;
+          });
+        } else if (authState.event == AuthChangeEvent.signedOut) {
+          setState(() {
+            _isPasswordRecovery = false;
+          });
+        }
+      },
+      onError: (Object error, StackTrace stackTrace) {
+        debugPrint('Không thể cập nhật phiên đăng nhập: $error');
+      },
+    );
   }
 
   @override

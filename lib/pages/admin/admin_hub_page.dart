@@ -1,3 +1,4 @@
+import '../../core/request_timeout.dart';
 import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
@@ -74,7 +75,7 @@ class AdminDashboardView extends StatefulWidget {
 
 class _AdminDashboardViewState extends State<AdminDashboardView> {
   late Future<List<OrderModel>> _dashboardFuture;
-  double _csat = 4.9;
+  double _csat = 0;
   int _reviewCount = 0;
 
   @override
@@ -102,7 +103,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
         .from('orders')
         .select('*, order_items(*, services(name, unit))')
         .order('created_at', ascending: false)
-        .timeout(const Duration(seconds: 5));
+        .timeout(supabaseRequestTimeout);
 
     return (result as List)
         .whereType<Map<String, dynamic>>()
@@ -120,10 +121,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   }
 
   String _formatMoney(num val) {
-    return val.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => '.',
-    );
+    return val
+        .toStringAsFixed(0)
+        .replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.');
   }
 
   @override
@@ -135,7 +135,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
           children: [
             Icon(Icons.dashboard_outlined, color: Colors.amber),
             SizedBox(width: 8),
-            Text('Dashboard Quản trị', style: TextStyle(fontWeight: FontWeight.bold)),
+            Text(
+              'Dashboard Quản trị',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
           ],
         ),
         backgroundColor: darkBlue,
@@ -155,12 +158,39 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
             return const Center(child: CircularProgressIndicator());
           }
 
+          if (snapshot.hasError) {
+            return Center(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  const Text('Không tải được dữ liệu tổng quan.'),
+                  const SizedBox(height: 12),
+                  FilledButton(
+                    onPressed: _refresh,
+                    child: const Text('Thử lại'),
+                  ),
+                ],
+              ),
+            );
+          }
+
           final orders = snapshot.data ?? [];
 
-          final pendingOrders = orders.where((o) => o.status == 'pending').toList();
-          final confirmedOrders = orders.where((o) => o.status == 'confirmed').toList();
-          final processingOrders = orders.where((o) => o.status == 'processing').toList();
-          final completedOrders = orders.where((o) => o.status == 'completed').toList();
+          final pendingOrders = orders
+              .where((o) => o.status == 'pending')
+              .toList();
+          final confirmedOrders = orders
+              .where((o) => o.status == 'confirmed')
+              .toList();
+          final washingOrders = orders
+              .where((o) => o.status == 'washing')
+              .toList();
+          final deliveringOrders = orders
+              .where((o) => o.status == 'delivering')
+              .toList();
+          final completedOrders = orders
+              .where((o) => o.status == 'completed')
+              .toList();
 
           double totalRevenue = 0;
           for (final o in completedOrders) {
@@ -195,7 +225,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     children: [
                       const Row(
                         children: [
-                          Icon(Icons.account_balance_wallet, color: Colors.amber, size: 24),
+                          Icon(
+                            Icons.account_balance_wallet,
+                            color: Colors.amber,
+                            size: 24,
+                          ),
                           SizedBox(width: 8),
                           Text(
                             'TỔNG DOANH THU ĐƠN HOÀN TẤT',
@@ -220,7 +254,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       const SizedBox(height: 8),
                       Text(
                         'Từ ${completedOrders.length} đơn hàng đã giao thành công',
-                        style: const TextStyle(color: Colors.white70, fontSize: 13),
+                        style: const TextStyle(
+                          color: Colors.white70,
+                          fontSize: 13,
+                        ),
                       ),
                     ],
                   ),
@@ -230,7 +267,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 // KPI Grid
                 const Text(
                   'Tình trạng vận hành',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkBlue),
+                  style: TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
                 ),
                 const SizedBox(height: 12),
                 Row(
@@ -260,7 +301,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                     Expanded(
                       child: _kpiCard(
                         title: 'Đang giặt sấy',
-                        count: processingOrders.length,
+                        count: washingOrders.length,
                         color: const Color(0xFF7952B3),
                         icon: Icons.local_laundry_service,
                       ),
@@ -275,6 +316,14 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       ),
                     ),
                   ],
+                ),
+                const SizedBox(height: 14),
+
+                _kpiCard(
+                  title: 'Đang giao hàng',
+                  count: deliveringOrders.length,
+                  color: Colors.teal,
+                  icon: Icons.local_shipping,
                 ),
                 const SizedBox(height: 14),
 
@@ -294,7 +343,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           color: Colors.amber.withValues(alpha: 0.12),
                           borderRadius: BorderRadius.circular(14),
                         ),
-                        child: const Icon(Icons.star_rounded, color: Colors.amber, size: 28),
+                        child: const Icon(
+                          Icons.star_rounded,
+                          color: Colors.amber,
+                          size: 28,
+                        ),
                       ),
                       const SizedBox(width: 14),
                       Expanded(
@@ -303,13 +356,18 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           children: [
                             const Text(
                               'Chỉ số hài lòng khách hàng (CSAT)',
-                              style: TextStyle(fontSize: 12.5, color: Colors.black54),
+                              style: TextStyle(
+                                fontSize: 12.5,
+                                color: Colors.black54,
+                              ),
                             ),
                             const SizedBox(height: 2),
                             Row(
                               children: [
                                 Text(
-                                  '${_csat.toStringAsFixed(1)} / 5.0',
+                                  _reviewCount == 0
+                                      ? 'Chưa có đánh giá'
+                                      : '${_csat.toStringAsFixed(1)} / 5.0',
                                   style: const TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
@@ -318,13 +376,16 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                                 ),
                                 const SizedBox(width: 8),
                                 Container(
-                                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 2,
+                                  ),
                                   decoration: BoxDecoration(
                                     color: Colors.green.withValues(alpha: 0.12),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: Text(
-                                    '${_reviewCount > 0 ? _reviewCount : 'Uy tín'} đánh giá',
+                                    '$_reviewCount đánh giá',
                                     style: const TextStyle(
                                       fontSize: 11,
                                       fontWeight: FontWeight.bold,
@@ -348,10 +409,17 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   children: [
                     const Text(
                       'Đơn hàng cần xử lý gấp',
-                      style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: darkBlue),
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: darkBlue,
+                      ),
                     ),
                     Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 10,
+                        vertical: 4,
+                      ),
                       decoration: BoxDecoration(
                         color: pendingOrders.isNotEmpty
                             ? Colors.red.withValues(alpha: 0.12)
@@ -401,17 +469,28 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                       ),
                       child: ListTile(
                         leading: CircleAvatar(
-                          backgroundColor: const Color(0xFFED8B00).withValues(alpha: 0.12),
-                          child: const Icon(Icons.schedule, color: Color(0xFFED8B00)),
+                          backgroundColor: const Color(0xFFED8B00)
+                              .withValues(alpha: 0.12),
+                          child: const Icon(
+                            Icons.schedule,
+                            color: Color(0xFFED8B00),
+                          ),
                         ),
-                        title: Text('Đơn #${o.id} • ${o.customerName}',
-                            style: const TextStyle(fontWeight: FontWeight.bold)),
-                        subtitle: Text('Hẹn lấy: ${o.formattedPickupTime}\n${o.address}',
-                            maxLines: 2, overflow: TextOverflow.ellipsis),
+                        title: Text(
+                          'Đơn #${o.id} • ${o.customerName}',
+                          style: const TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        subtitle: Text(
+                          'Hẹn lấy: ${o.formattedPickupTime}\n${o.address}',
+                          maxLines: 2,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                         trailing: Text(
                           o.formattedTotalPrice,
                           style: const TextStyle(
-                              color: primaryBlue, fontWeight: FontWeight.bold),
+                            color: primaryBlue,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
                       ),
                     );

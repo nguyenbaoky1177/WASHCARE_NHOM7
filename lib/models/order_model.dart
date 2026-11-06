@@ -10,6 +10,8 @@ class OrderModel {
   final String phone;
   final String address;
   final String? note;
+  final String paymentMethod;
+  final String momoPaymentStatus;
   final DateTime? pickupTime;
   final String status;
   final double totalPrice;
@@ -23,6 +25,8 @@ class OrderModel {
     required this.phone,
     required this.address,
     this.note,
+    this.paymentMethod = 'cod',
+    this.momoPaymentStatus = 'unpaid',
     this.pickupTime,
     required this.status,
     required this.totalPrice,
@@ -47,6 +51,8 @@ class OrderModel {
       phone: json['phone']?.toString() ?? '',
       address: json['address']?.toString() ?? '',
       note: json['note']?.toString(),
+      paymentMethod: json['payment_method']?.toString() ?? 'cod',
+      momoPaymentStatus: json['momo_payment_status']?.toString() ?? 'unpaid',
       pickupTime: json['pickup_time'] != null
           ? DateTime.tryParse(json['pickup_time'].toString())?.toLocal()
           : null,
@@ -68,6 +74,8 @@ class OrderModel {
       'phone': phone,
       'address': address,
       'note': note,
+      'payment_method': paymentMethod,
+      'momo_payment_status': momoPaymentStatus,
       'pickup_time': pickupTime?.toUtc().toIso8601String(),
       'status': status,
       'total_price': totalPrice,
@@ -80,8 +88,10 @@ class OrderModel {
         return 'Chờ xác nhận';
       case 'confirmed':
         return 'Đã xác nhận';
-      case 'processing':
-        return 'Đang xử lý';
+      case 'washing':
+        return 'Đang giặt sấy';
+      case 'delivering':
+        return 'Đang giao hàng';
       case 'completed':
         return 'Hoàn thành';
       case 'cancelled':
@@ -97,8 +107,10 @@ class OrderModel {
         return const Color(0xFFED8B00);
       case 'confirmed':
         return primaryBlue;
-      case 'processing':
+      case 'washing':
         return const Color(0xFF7952B3);
+      case 'delivering':
+        return Colors.teal;
       case 'completed':
         return const Color(0xFF16845B);
       case 'cancelled':
@@ -114,8 +126,10 @@ class OrderModel {
         return Icons.schedule;
       case 'confirmed':
         return Icons.check_circle_outline;
-      case 'processing':
+      case 'washing':
         return Icons.local_laundry_service_outlined;
+      case 'delivering':
+        return Icons.local_shipping_outlined;
       case 'completed':
         return Icons.task_alt;
       case 'cancelled':
@@ -136,14 +150,16 @@ class OrderModel {
   String get formattedPickupTime => _formatDateTime(pickupTime);
 
   String get formattedTotalPrice {
-    return '${totalPrice.toStringAsFixed(0).replaceAllMapped(
-      RegExp(r'\B(?=(\d{3})+(?!\d))'),
-      (match) => '.',
-    )} đ';
+    return '${totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.')} đ';
   }
 
+  bool get canCancel => isPending &&
+      (paymentMethod != 'momo' ||
+          !['pending', 'paid', 'review_required'].contains(momoPaymentStatus));
+
   bool get isPending => status == 'pending';
-  bool get isActive => ['pending', 'confirmed', 'processing'].contains(status);
+  bool get isActive =>
+      ['pending', 'confirmed', 'washing', 'delivering'].contains(status);
   bool get isCompleted => status == 'completed';
   bool get isCancelled => status == 'cancelled';
 }

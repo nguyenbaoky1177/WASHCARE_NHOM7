@@ -58,10 +58,7 @@ void main() {
         'service_id': 1,
         'quantity': 3.5,
         'subtotal': 87500,
-        'services': {
-          'name': 'Giặt sấy',
-          'unit': 'kg',
-        },
+        'services': {'name': 'Giặt sấy', 'unit': 'kg'},
       };
 
       final item = OrderItemModel.fromJson(json);
@@ -74,6 +71,52 @@ void main() {
   });
 
   group('OrderModel Tests', () {
+    test('MoMo pending or paid orders cannot be cancelled', () {
+      for (final state in ['pending', 'paid', 'review_required']) {
+        final order = OrderModel.fromJson({
+          'status': 'pending', 'payment_method': 'momo',
+          'momo_payment_status': state,
+        });
+        expect(order.canCancel, isFalse);
+      }
+      final unpaid = OrderModel.fromJson({
+        'status': 'pending', 'payment_method': 'momo',
+        'momo_payment_status': 'failed',
+      });
+      expect(unpaid.canCancel, isTrue);
+      expect(OrderModel.fromJson(unpaid.toJson()).momoPaymentStatus, 'failed');
+    });
+
+    test('payment method survives reload and legacy orders use COD', () {
+      final demo = OrderModel.fromJson({
+        'id': 42,
+        'payment_method': 'momo_demo',
+        'total_price': 95000,
+      });
+      expect(demo.paymentMethod, 'momo_demo');
+      expect(OrderModel.fromJson(demo.toJson()).paymentMethod, 'momo_demo');
+      expect(OrderModel.fromJson({'id': 1}).paymentMethod, 'cod');
+    });
+
+    test('washing and delivering remain visible in active orders', () {
+      for (final status in ['washing', 'delivering']) {
+        final order = OrderModel.fromJson({
+          'id': 1,
+          'user_id': 'customer',
+          'status': status,
+          'total_price': 95000,
+        });
+        expect(order.isActive, isTrue);
+        expect(
+          order.statusDisplayName,
+          status == 'washing' ? 'Đang giặt sấy' : 'Đang giao hàng',
+        );
+      }
+      final completed = OrderModel.fromJson({'status': 'completed'});
+      expect(completed.isActive, isFalse);
+      expect(completed.isCompleted, isTrue);
+    });
+
     test('fromJson and status helpers', () {
       final json = {
         'id': 55,
@@ -92,7 +135,7 @@ void main() {
             'quantity': 2,
             'subtotal': 150000,
             'services': {'name': 'Giặt hấp', 'unit': 'chiếc'},
-          }
+          },
         ],
       };
 

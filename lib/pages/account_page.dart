@@ -65,19 +65,14 @@ class _AccountPageState extends State<AccountPage> {
   void _showMessage(String message) {
     if (!mounted) return;
 
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(message)));
   }
 
   Future<void> _editProfile() async {
     final formKey = GlobalKey<FormState>();
-    final nameController = TextEditingController(
-      text: _nameController.text,
-    );
-    final phoneController = TextEditingController(
-      text: _phoneController.text,
-    );
+    final nameController = TextEditingController(text: _nameController.text);
+    final phoneController = TextEditingController(text: _phoneController.text);
 
     final result = await showDialog<bool>(
       context: context,
@@ -157,11 +152,12 @@ class _AccountPageState extends State<AccountPage> {
       final name = nameController.text.trim();
       final phone = phoneController.text.trim();
 
-      await supabase.from('profiles').upsert({
-        'id': user.id,
-        'full_name': name,
-        'phone': phone.isEmpty ? null : phone,
-      });
+      await supabase
+          .from('profiles')
+          .update({'full_name': name, 'phone': phone.isEmpty ? null : phone})
+          .eq('id', user.id)
+          .select('id')
+          .single();
 
       if (!mounted) return;
 
@@ -367,10 +363,7 @@ class _AccountPageState extends State<AccountPage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(
-                    fontSize: 12,
-                    color: Colors.black54,
-                  ),
+                  style: const TextStyle(fontSize: 12, color: Colors.black54),
                 ),
                 const SizedBox(height: 4),
                 Text(
@@ -400,10 +393,7 @@ class _AccountPageState extends State<AccountPage> {
     final color = danger ? Colors.redAccent : primaryBlue;
 
     return ListTile(
-      contentPadding: const EdgeInsets.symmetric(
-        horizontal: 16,
-        vertical: 5,
-      ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 5),
       leading: Container(
         width: 44,
         height: 44,
@@ -703,10 +693,7 @@ class _AccountPageState extends State<AccountPage> {
                   const Center(
                     child: Text(
                       'WashCare • Chăm sóc quần áo của bạn',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.black45,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.black45),
                     ),
                   ),
                   const SizedBox(height: 20),

@@ -49,22 +49,37 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
 
   String _statusText(dynamic status) {
     switch (status?.toString()) {
-      case 'pending': return 'Chờ xác nhận';
-      case 'confirmed': return 'Đã xác nhận';
-      case 'processing': return 'Đang xử lý';
-      case 'completed': return 'Hoàn thành';
-      case 'cancelled': return 'Đã hủy';
-      default: return status?.toString() ?? 'Không rõ';
+      case 'pending':
+        return 'Chờ xác nhận';
+      case 'confirmed':
+        return 'Đã xác nhận';
+      case 'washing':
+        return 'Đang giặt sấy';
+      case 'delivering':
+        return 'Đang giao hàng';
+      case 'completed':
+        return 'Hoàn thành';
+      case 'cancelled':
+        return 'Đã hủy';
+      default:
+        return status?.toString() ?? 'Không rõ';
     }
   }
 
   Color _statusColor(dynamic status) {
     switch (status?.toString()) {
-      case 'completed': return Colors.green;
-      case 'cancelled': return Colors.red;
-      case 'processing': return Colors.orange;
-      case 'confirmed': return Colors.blue;
-      default: return Colors.grey;
+      case 'completed':
+        return Colors.green;
+      case 'cancelled':
+        return Colors.red;
+      case 'washing':
+        return Colors.orange;
+      case 'delivering':
+        return Colors.teal;
+      case 'confirmed':
+        return Colors.blue;
+      default:
+        return Colors.grey;
     }
   }
 
@@ -78,8 +93,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
     return Scaffold(
       backgroundColor: const Color(0xFFF5F8FC),
       appBar: AppBar(
-        title: const Text('Lịch sử đơn hàng',
-            style: TextStyle(fontWeight: FontWeight.bold)),
+        title: const Text(
+          'Lịch sử đơn hàng',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
         backgroundColor: const Color(0xFF1976D2),
         foregroundColor: Colors.white,
       ),
@@ -96,19 +113,27 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
                   children: [
-                    const Icon(Icons.error_outline, size: 48, color: Colors.red),
+                    const Icon(
+                      Icons.error_outline,
+                      size: 48,
+                      color: Colors.red,
+                    ),
                     const SizedBox(height: 12),
-                    const Text('Không tải được lịch sử đơn hàng.',
-                        textAlign: TextAlign.center),
+                    const Text(
+                      'Không tải được lịch sử đơn hàng.',
+                      textAlign: TextAlign.center,
+                    ),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: _refreshOrders,
                       child: const Text('Thử lại'),
                     ),
                     const SizedBox(height: 8),
-                    Text('${snapshot.error}',
-                        textAlign: TextAlign.center,
-                        style: const TextStyle(fontSize: 12, color: Colors.grey)),
+                    Text(
+                      '${snapshot.error}',
+                      textAlign: TextAlign.center,
+                      style: const TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
                   ],
                 ),
               ),
@@ -124,8 +149,12 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   SizedBox(height: 140),
                   Icon(Icons.receipt_long, size: 72, color: Colors.grey),
                   SizedBox(height: 16),
-                  Center(child: Text('Bạn chưa có đơn hàng nào.',
-                      style: TextStyle(fontSize: 16))),
+                  Center(
+                    child: Text(
+                      'Bạn chưa có đơn hàng nào.',
+                      style: TextStyle(fontSize: 16),
+                    ),
+                  ),
                 ],
               ),
             );
@@ -147,31 +176,49 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   elevation: 2,
                   color: Colors.white,
                   shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16)),
+                    borderRadius: BorderRadius.circular(16),
+                  ),
                   child: Padding(
                     padding: const EdgeInsets.all(16),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Row(children: [
-                          const Icon(Icons.receipt_long, color: Color(0xFF1976D2)),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text('Đơn hàng #${order['id']}',
+                        Row(
+                          children: [
+                            const Icon(
+                              Icons.receipt_long,
+                              color: Color(0xFF1976D2),
+                            ),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                'Đơn hàng #${order['id']}',
                                 style: const TextStyle(
-                                    fontSize: 17, fontWeight: FontWeight.bold)),
-                          ),
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                                horizontal: 10, vertical: 6),
-                            decoration: BoxDecoration(
+                                  fontSize: 17,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 10,
+                                vertical: 6,
+                              ),
+                              decoration: BoxDecoration(
                                 color: color.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20)),
-                            child: Text(_statusText(status),
-                                style: TextStyle(color: color,
-                                    fontWeight: FontWeight.w600, fontSize: 12)),
-                          ),
-                        ]),
+                                borderRadius: BorderRadius.circular(20),
+                              ),
+                              child: Text(
+                                _statusText(status),
+                                style: TextStyle(
+                                  color: color,
+                                  fontWeight: FontWeight.w600,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
                         const Divider(height: 24),
                         Text('Ngày đặt: ${_formatDate(order['created_at'])}'),
                         const SizedBox(height: 8),
@@ -181,8 +228,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         const SizedBox(height: 8),
                         Text('Địa chỉ: ${order['address'] ?? ''}'),
                         const SizedBox(height: 12),
-                        const Text('Dịch vụ đã đặt',
-                            style: TextStyle(fontWeight: FontWeight.bold)),
+                        const Text(
+                          'Dịch vụ đã đặt',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
                         const SizedBox(height: 8),
                         if (items.isEmpty)
                           const Text('Không có thông tin dịch vụ.')
@@ -201,9 +250,17 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   const Text('• '),
-                                  Expanded(child: Text('$name — ${item['quantity']} $unit')),
-                                  Text(_formatPrice(item['subtotal']),
-                                      style: const TextStyle(fontWeight: FontWeight.w500)),
+                                  Expanded(
+                                    child: Text(
+                                      '$name — ${item['quantity']} $unit',
+                                    ),
+                                  ),
+                                  Text(
+                                    _formatPrice(item['subtotal']),
+                                    style: const TextStyle(
+                                      fontWeight: FontWeight.w500,
+                                    ),
+                                  ),
                                 ],
                               ),
                             );
@@ -212,11 +269,21 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
                           children: [
-                            const Text('Tổng tiền',
-                                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-                            Text(_formatPrice(order['total_price']),
-                                style: const TextStyle(color: Color(0xFF1976D2),
-                                    fontWeight: FontWeight.bold, fontSize: 18)),
+                            const Text(
+                              'Tổng tiền',
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                fontSize: 16,
+                              ),
+                            ),
+                            Text(
+                              _formatPrice(order['total_price']),
+                              style: const TextStyle(
+                                color: Color(0xFF1976D2),
+                                fontWeight: FontWeight.bold,
+                                fontSize: 18,
+                              ),
+                            ),
                           ],
                         ),
                         if ((order['note'] ?? '').toString().isNotEmpty) ...[
@@ -224,8 +291,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           Text('Ghi chú: ${order['note']}'),
                         ],
                         const SizedBox(height: 8),
-                        Text('Thời gian nhận: ${_formatDate(order['pickup_time'])}',
-                            style: const TextStyle(color: Colors.black54)),
+                        Text(
+                          'Thời gian nhận: ${_formatDate(order['pickup_time'])}',
+                          style: const TextStyle(color: Colors.black54),
+                        ),
                       ],
                     ),
                   ),

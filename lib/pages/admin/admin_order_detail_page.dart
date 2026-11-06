@@ -1,19 +1,19 @@
+import '../../core/request_timeout.dart';
+
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import '../../widgets/order_status_badge.dart';
 import '../../core/app_colors.dart';
 import '../../core/supabase_client.dart';
-import '../../core/vietqr_helper.dart';
+import '../../widgets/momo_payment_card.dart';
 import '../../models/models.dart';
 
 class AdminOrderDetailPage extends StatefulWidget {
   final OrderModel order;
 
-  const AdminOrderDetailPage({
-    super.key,
-    required this.order,
-  });
+  const AdminOrderDetailPage({super.key, required this.order});
 
   @override
   State<AdminOrderDetailPage> createState() => _AdminOrderDetailPageState();
@@ -56,10 +56,22 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           ),
           callback: (_) async {
             if (!mounted) return;
-            await _reloadOrder();
+            try {
+              await _reloadOrder();
+            } catch (error) {
+              debugPrint('Admin realtime reload failed: $error');
+            }
           },
         )
-        .subscribe();
+        .subscribe((status, error) async {
+          if (status == RealtimeSubscribeStatus.subscribed && mounted) {
+            try {
+              await _reloadOrder();
+            } catch (error) {
+              debugPrint('Admin reconnect reload failed: $error');
+            }
+          }
+        });
   }
 
   Future<void> _reloadOrder() async {
@@ -67,7 +79,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         .from('orders')
         .select('*, order_items(*, services(name, unit))')
         .eq('id', _order.id)
-        .maybeSingle();
+        .maybeSingle()
+        .timeout(supabaseRequestTimeout);
 
     if (refreshed != null && mounted) {
       setState(() {
@@ -78,9 +91,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
 
   void _showMessage(String msg) {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text(msg)),
-    );
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
 
   Future<void> _updateStatus(String newStatus, String actionName) async {
@@ -109,24 +120,14 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     setState(() => _updating = true);
 
     try {
-      var rpcSuccess = false;
-      try {
-        await supabase.rpc('admin_update_order_status', params: {
+      await supabase.rpc(
+        'admin_update_order_status',
+        params: {
           'p_order_id': _order.id,
           'p_new_status': newStatus,
           'p_note': actionName,
-        });
-        rpcSuccess = true;
-      } catch (_) {
-        // Fallback to direct update
-      }
-
-      if (!rpcSuccess) {
-        await supabase
-            .from('orders')
-            .update({'status': newStatus})
-            .eq('id', _order.id);
-      }
+        },
+      );
 
       if (!mounted) return;
 
@@ -134,8 +135,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
       await _reloadOrder();
     } catch (e) {
       final errStr = e.toString().toLowerCase();
-      if (errStr.contains('admin') || errStr.contains('permission') || errStr.contains('42501')) {
-        _showMessage('Lỗi: Bạn cần được cấp role="admin" trong bảng profiles để cập nhật đơn.');
+      if (errStr.contains('admin') ||
+          errStr.contains('permission') ||
+          errStr.contains('42501')) {
+        _showMessage(
+          'Lỗi: Bạn cần được cấp role="admin" trong bảng profiles để cập nhật đơn.',
+        );
       } else {
         _showMessage('Cập nhật thất bại: $e');
       }
@@ -148,7 +153,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     const statusOptions = [
       ('pending', 'Chờ xác nhận (pending)', Color(0xFFED8B00)),
       ('confirmed', 'Đã tiếp nhận (confirmed)', primaryBlue),
-      ('processing', 'Đang giặt sấy (processing)', Color(0xFF7952B3)),
+      ('washing', 'Đang giặt sấy (washing)', Color(0xFF7952B3)),
+      ('delivering', 'Đang giao hàng', Colors.teal),
       ('completed', 'Hoàn thành & Giao đồ (completed)', Color(0xFF16845B)),
       ('cancelled', 'Đã hủy / Từ chối (cancelled)', Color(0xFFD64545)),
     ];
@@ -156,37 +162,56 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
     final selected = await showDialog<String>(
       context: context,
       builder: (ctx) => SimpleDialog(
-        title: const Text('Chọn trạng thái cập nhật', style: TextStyle(fontWeight: FontWeight.bold)),
-        children: statusOptions.map((opt) {
-          final isCurrent = _order.status == opt.$1;
-          return SimpleDialogOption(
-            onPressed: () => Navigator.pop(ctx, opt.$1),
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  Container(
-                    width: 10,
-                    height: 10,
-                    decoration: BoxDecoration(shape: BoxShape.circle, color: opt.$3),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      opt.$2,
-                      style: TextStyle(
-                        fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
-                        color: isCurrent ? opt.$3 : Colors.black87,
+        title: const Text(
+          'Chọn trạng thái cập nhật',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        children: statusOptions
+            .where((opt) {
+              return switch (_order.status) {
+                'pending' => ['confirmed', 'cancelled'].contains(opt.$1),
+                'confirmed' => opt.$1 == 'washing',
+                'washing' => opt.$1 == 'delivering',
+                'delivering' => opt.$1 == 'completed',
+                _ => false,
+              };
+            })
+            .map((opt) {
+              final isCurrent = _order.status == opt.$1;
+              return SimpleDialogOption(
+                onPressed: () => Navigator.pop(ctx, opt.$1),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 6),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 10,
+                        height: 10,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: opt.$3,
+                        ),
                       ),
-                    ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          opt.$2,
+                          style: TextStyle(
+                            fontWeight: isCurrent
+                                ? FontWeight.bold
+                                : FontWeight.normal,
+                            color: isCurrent ? opt.$3 : Colors.black87,
+                          ),
+                        ),
+                      ),
+                      if (isCurrent)
+                        const Icon(Icons.check, size: 18, color: Colors.green),
+                    ],
                   ),
-                  if (isCurrent)
-                    const Icon(Icons.check, size: 18, color: Colors.green),
-                ],
-              ),
-            ),
-          );
-        }).toList(),
+                ),
+              );
+            })
+            .toList(),
       ),
     );
 
@@ -213,7 +238,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   Future<void> _openMap(String address) async {
     if (address.isEmpty) return;
     final encoded = Uri.encodeComponent(address);
-    final uri = Uri.parse('https://www.google.com/maps/search/?api=1&query=$encoded');
+    final uri = Uri.parse(
+      'https://www.google.com/maps/search/?api=1&query=$encoded',
+    );
     try {
       if (await canLaunchUrl(uri)) {
         await launchUrl(uri, mode: LaunchMode.externalApplication);
@@ -286,30 +313,15 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                           letterSpacing: 0.8,
                         ),
                       ),
-                      Container(
+                      OrderStatusBadge(
+                        order: _order,
+                        showIcon: true,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 12,
                           vertical: 6,
                         ),
-                        decoration: BoxDecoration(
-                          color: _order.statusColor.withValues(alpha: 0.12),
-                          borderRadius: BorderRadius.circular(20),
-                        ),
-                        child: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Icon(_order.statusIcon, size: 16, color: _order.statusColor),
-                            const SizedBox(width: 6),
-                            Text(
-                              _order.statusDisplayName,
-                              style: TextStyle(
-                                color: _order.statusColor,
-                                fontWeight: FontWeight.bold,
-                                fontSize: 13,
-                              ),
-                            ),
-                          ],
-                        ),
+                        backgroundAlpha: 0.12,
+                        fontSize: 13,
                       ),
                     ],
                   ),
@@ -337,24 +349,31 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         children: [
                           Expanded(
                             child: FilledButton.icon(
-                              onPressed: () => _updateStatus('confirmed', 'Tiếp nhận đơn'),
+                              onPressed: () =>
+                                  _updateStatus('confirmed', 'Tiếp nhận đơn'),
                               icon: const Icon(Icons.check_circle_outline),
                               label: const Text('Tiếp nhận đơn'),
                               style: FilledButton.styleFrom(
                                 backgroundColor: primaryBlue,
-                                padding: const EdgeInsets.symmetric(vertical: 12),
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 12,
+                                ),
                               ),
                             ),
                           ),
                           const SizedBox(width: 10),
                           OutlinedButton.icon(
-                            onPressed: () => _updateStatus('cancelled', 'Hủy đơn hàng'),
+                            onPressed: () =>
+                                _updateStatus('cancelled', 'Hủy đơn hàng'),
                             icon: const Icon(Icons.cancel_outlined),
                             label: const Text('Từ chối'),
                             style: OutlinedButton.styleFrom(
                               foregroundColor: Colors.red,
                               side: const BorderSide(color: Colors.redAccent),
-                              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 12,
+                                horizontal: 16,
+                              ),
                             ),
                           ),
                         ],
@@ -363,7 +382,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: () => _updateStatus('processing', 'Bắt đầu giặt sấy'),
+                          onPressed: () =>
+                              _updateStatus('washing', 'Bắt đầu giặt sấy'),
                           icon: const Icon(Icons.local_laundry_service),
                           label: const Text('Bắt đầu giặt sấy'),
                           style: FilledButton.styleFrom(
@@ -372,18 +392,26 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                           ),
                         ),
                       ),
-                    ] else if (_order.status == 'processing') ...[
+                    ] else if (_order.status == 'washing') ...[
                       SizedBox(
                         width: double.infinity,
                         child: FilledButton.icon(
-                          onPressed: () => _updateStatus('completed', 'Hoàn thành & Giao đồ'),
+                          onPressed: () =>
+                              _updateStatus('delivering', 'Bắt đầu giao hàng'),
                           icon: const Icon(Icons.task_alt),
-                          label: const Text('Hoàn tất & Đã giao đồ'),
+                          label: const Text('Bắt đầu giao hàng'),
                           style: FilledButton.styleFrom(
                             backgroundColor: const Color(0xFF16845B),
                             padding: const EdgeInsets.symmetric(vertical: 13),
                           ),
                         ),
+                      ),
+                    ] else if (_order.status == 'delivering') ...[
+                      FilledButton.icon(
+                        onPressed: () =>
+                            _updateStatus('completed', 'Đã giao hàng'),
+                        icon: const Icon(Icons.task_alt),
+                        label: const Text('Xác nhận đã giao'),
                       ),
                     ] else ...[
                       Container(
@@ -398,7 +426,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               ? '✓ Đơn hàng đã hoàn thành trọn vẹn.'
                               : '✕ Đơn hàng đã bị hủy.',
                           textAlign: TextAlign.center,
-                          style: const TextStyle(fontWeight: FontWeight.w600, color: Colors.blueGrey),
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            color: Colors.blueGrey,
+                          ),
                         ),
                       ),
                     ],
@@ -409,7 +440,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         icon: const Icon(Icons.swap_horiz, size: 18),
                         label: const Text(
                           'Đổi trạng thái tùy chọn...',
-                          style: TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                          ),
                         ),
                       ),
                     ),
@@ -508,7 +542,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                             Expanded(
                               child: Text(
                                 item.serviceName,
-                                style: const TextStyle(fontWeight: FontWeight.w600),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
                             Text(
@@ -519,7 +555,9 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               const SizedBox(width: 12),
                               Text(
                                 item.formattedSubtotal,
-                                style: const TextStyle(fontWeight: FontWeight.bold),
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
                               ),
                             ],
                           ],
@@ -532,7 +570,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                     children: [
                       const Text(
                         'Tổng tiền thanh toán',
-                        style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 15,
+                        ),
                       ),
                       Text(
                         _order.formattedTotalPrice,
@@ -544,27 +585,11 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       ),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  SizedBox(
-                    width: double.infinity,
-                    child: OutlinedButton.icon(
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: primaryBlue,
-                        side: const BorderSide(color: primaryBlue),
-                        padding: const EdgeInsets.symmetric(vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
-                      onPressed: () {
-                        VietQrHelper.showPaymentDialog(
-                          context: context,
-                          orderId: _order.id,
-                          amount: _order.totalPrice,
-                        );
-                      },
-                      icon: const Icon(Icons.qr_code_2),
-                      label: const Text('Mở mã VietQR thu tiền của khách', style: TextStyle(fontWeight: FontWeight.bold)),
-                    ),
-                  ),
+                  if (['momo', 'momo_demo'].contains(_order.paymentMethod) &&
+                      !_order.isCancelled) ...[
+                    const SizedBox(height: 16),
+                    MomoPaymentCard(order: _order, allowPayment: false),
+                  ],
                 ],
               ),
             ),
