@@ -92,6 +92,19 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  String _getGreeting() {
+    final hour = DateTime.now().hour;
+    if (hour >= 5 && hour < 11) {
+      return 'Chào buổi sáng ☀️';
+    } else if (hour >= 11 && hour < 14) {
+      return 'Chào buổi trưa 🌤️';
+    } else if (hour >= 14 && hour < 18) {
+      return 'Chào buổi chiều ⛅';
+    } else {
+      return 'Chào buổi tối 🌙';
+    }
+  }
+
   void _loadAll() {
     _profileFuture = _loadProfile();
     _servicesFuture = _loadServices();
@@ -308,32 +321,23 @@ class _HomePageState extends State<HomePage> {
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisSize: MainAxisSize.min,
                   children: [
-                    Row(
-                      children: [
-                        const Icon(
-                          Icons.location_on,
-                          size: 13,
-                          color: primaryBlue,
-                        ),
-                        const SizedBox(width: 3),
-                        const Text(
-                          'Giao nhận tận nơi',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.black54,
-                            fontWeight: FontWeight.w500,
-                          ),
-                        ),
-                      ],
+                    Text(
+                      _getGreeting(),
+                      style: const TextStyle(
+                        fontSize: 12,
+                        color: primaryBlue,
+                        fontWeight: FontWeight.w600,
+                      ),
                     ),
                     const SizedBox(height: 2),
                     Text(
-                      'Xin chào, $name!',
+                      name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: const TextStyle(
-                        fontSize: 16,
+                        fontSize: 17,
                         fontWeight: FontWeight.bold,
                         color: darkBlue,
                       ),
