@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
 import '../core/profile_cache.dart';
@@ -338,6 +339,269 @@ class _AccountPageState extends State<AccountPage> {
     }
   }
 
+  Future<void> _callHotline() async {
+    final uri = Uri.parse('tel:19001234');
+    try {
+      if (await canLaunchUrl(uri)) {
+        await launchUrl(uri);
+      } else {
+        _showMessage('Không thể mở ứng dụng gọi điện');
+      }
+    } catch (_) {
+      _showMessage('Không thể mở ứng dụng gọi điện');
+    }
+  }
+
+  void _showSupportDialog() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder: (bottomSheetContext) => Container(
+        decoration: const BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Center(
+              child: Container(
+                width: 44,
+                height: 4,
+                decoration: BoxDecoration(
+                  color: Colors.black12,
+                  borderRadius: BorderRadius.circular(2),
+                ),
+              ),
+            ),
+            const SizedBox(height: 18),
+            Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: primaryBlue.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Icon(
+                    Icons.support_agent,
+                    color: primaryBlue,
+                    size: 28,
+                  ),
+                ),
+                const SizedBox(width: 12),
+                const Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Hỗ trợ khách hàng',
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                        color: darkBlue,
+                      ),
+                    ),
+                    Text(
+                      'WashCare luôn sẵn sàng lắng nghe bạn',
+                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 20),
+            Container(
+              padding: const EdgeInsets.all(16),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F7FB),
+                borderRadius: BorderRadius.circular(16),
+                border: Border.all(color: const Color(0xFFE4ECF5)),
+              ),
+              child: Column(
+                children: [
+                  const Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Icon(Icons.access_time_filled, color: primaryBlue, size: 20),
+                      SizedBox(width: 10),
+                      Expanded(
+                        child: Text(
+                          'Thời gian hỗ trợ: 08:00 - 21:00\n(Tất cả các ngày trong tuần)',
+                          style: TextStyle(
+                            fontSize: 14,
+                            fontWeight: FontWeight.w600,
+                            color: darkBlue,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  Row(
+                    children: [
+                      const Icon(Icons.phone, color: Colors.green, size: 20),
+                      const SizedBox(width: 10),
+                      const Expanded(
+                        child: Text(
+                          'Hotline: 1900 1234',
+                          style: TextStyle(
+                            fontSize: 15,
+                            fontWeight: FontWeight.bold,
+                            color: darkBlue,
+                          ),
+                        ),
+                      ),
+                      FilledButton.icon(
+                        style: FilledButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 14,
+                            vertical: 8,
+                          ),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                        onPressed: () {
+                          Navigator.pop(bottomSheetContext);
+                          _callHotline();
+                        },
+                        icon: const Icon(Icons.call, size: 16),
+                        label: const Text('Gọi ngay'),
+                      ),
+                    ],
+                  ),
+                  const Divider(height: 20),
+                  const Row(
+                    children: [
+                      Icon(Icons.email_outlined, color: primaryBlue, size: 20),
+                      SizedBox(width: 10),
+                      Text(
+                        'Email: hotro@washcare.vn',
+                        style: TextStyle(fontSize: 14, color: darkBlue),
+                      ),
+                    ],
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 16),
+            const Text(
+              'Câu hỏi thường gặp',
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: darkBlue,
+              ),
+            ),
+            const SizedBox(height: 8),
+            _buildFaqItem(
+              'Thời gian giặt sấy mất bao lâu?',
+              'Thông thường từ 3 - 6 tiếng đối với dịch vụ giặt sấy thông thường, cam kết giao hàng trong ngày.',
+            ),
+            _buildFaqItem(
+              'Phí giao nhận được tính như thế nào?',
+              'Miễn phí vận chuyển 2 chiều cho đơn hàng từ 100.000đ trong bán kính 5km.',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildFaqItem(String question, String answer) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: ExpansionTile(
+        tilePadding: EdgeInsets.zero,
+        dense: true,
+        title: Text(
+          question,
+          style: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w600,
+            color: darkBlue,
+          ),
+        ),
+        children: [
+          Padding(
+            padding: const EdgeInsets.only(bottom: 8),
+            child: Align(
+              alignment: Alignment.centerLeft,
+              child: Text(
+                answer,
+                style: const TextStyle(fontSize: 13, color: Colors.black87),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showAboutDialog() {
+    showDialog(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: primaryBlue.withValues(alpha: 0.1),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: const Icon(Icons.local_laundry_service, color: primaryBlue),
+            ),
+            const SizedBox(width: 12),
+            const Text(
+              'Về WashCare',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              'WashCare - Ứng dụng giặt ủi thông minh',
+              style: TextStyle(fontWeight: FontWeight.w600, color: darkBlue),
+            ),
+            const SizedBox(height: 6),
+            const Text(
+              'Phiên bản: 1.0.0\nNhóm thực hiện: Nhóm 7\nDự án: Lập trình Thiết bị Di động',
+              style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
+            ),
+            const SizedBox(height: 12),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF4F7FB),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: const Text(
+                'Giải pháp tiện lợi, giao nhận tận nơi, bảo vệ và chăm sóc từng bộ trang phục của bạn.',
+                style: TextStyle(fontSize: 12, color: Colors.black54),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Đóng'),
+          ),
+        ],
+      ),
+    );
+  }
+
+
   Widget _infoTile({
     required IconData icon,
     required String title,
@@ -671,6 +935,20 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                     child: Column(
                       children: [
+                        _actionTile(
+                          icon: Icons.support_agent_outlined,
+                          title: 'Trung tâm hỗ trợ',
+                          subtitle: 'Hotline 08:00 - 21:00 & Giải đáp thắc mắc',
+                          onTap: _showSupportDialog,
+                        ),
+                        const Divider(height: 1, indent: 74),
+                        _actionTile(
+                          icon: Icons.info_outline,
+                          title: 'Về WashCare',
+                          subtitle: 'Phiên bản 1.0.0 & Nhóm phát triển',
+                          onTap: _showAboutDialog,
+                        ),
+                        const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.lock_outline,
                           title: 'Đổi mật khẩu',
