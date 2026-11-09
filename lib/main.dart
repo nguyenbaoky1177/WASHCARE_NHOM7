@@ -1,11 +1,14 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
-import 'core/app_colors.dart';
+import 'core/localization/app_localizations.dart';
+import 'core/localization/locale_controller.dart';
 import 'core/supabase_client.dart';
+import 'core/theme/app_theme.dart';
+import 'core/theme/theme_controller.dart';
 import 'pages/auth_page.dart';
 import 'pages/main_navigation_page.dart';
 import 'pages/reset_password_page.dart';
@@ -19,6 +22,10 @@ Future<void> main() async {
     publishableKey: SupabaseConfig.supabasePublishableKey,
   );
 
+  // Khởi tạo tùy chọn Theme và Ngôn ngữ đã lưu của người dùng
+  await ThemeController.instance.initialize();
+  await LocaleController.instance.initialize();
+
   runApp(const WashCareApp());
 }
 
@@ -27,33 +34,34 @@ class WashCareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WashCare',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: primaryBlue),
-        scaffoldBackgroundColor: backgroundColor,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          centerTitle: false,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDCE6F2)),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: primaryBlue, width: 1.5),
-          ),
-        ),
-      ),
-      home: const AuthGate(),
+    final themeController = ThemeController.instance;
+    final localeController = LocaleController.instance;
+
+    return ListenableBuilder(
+      listenable: Listenable.merge([themeController, localeController]),
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'WashCare',
+          debugShowCheckedModeBanner: false,
+
+          // Cấu hình Theme Sáng / Tối
+          theme: AppTheme.lightTheme,
+          darkTheme: AppTheme.darkTheme,
+          themeMode: themeController.themeMode,
+
+          // Cấu hình Đa ngôn ngữ (VI / EN)
+          locale: localeController.locale,
+          supportedLocales: AppLocalizations.supportedLocales,
+          localizationsDelegates: const [
+            AppLocalizations.delegate,
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+
+          home: const AuthGate(),
+        );
+      },
     );
   }
 }

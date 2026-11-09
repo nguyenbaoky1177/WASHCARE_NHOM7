@@ -7,6 +7,7 @@ import '../core/profile_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'admin/admin_hub_page.dart';
+import '../widgets/settings/theme_language_bottom_sheet.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -935,6 +936,13 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                     child: Column(
                       children: [
+                        _actionTile(
+                          icon: Icons.palette_outlined,
+                          title: 'Giao diện & Ngôn ngữ',
+                          subtitle: 'Chế độ Sáng/Tối và Tiếng Việt/English',
+                          onTap: () => ThemeLanguageBottomSheet.show(context),
+                        ),
+                        const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.support_agent_outlined,
                           title: 'Trung tâm hỗ trợ',
