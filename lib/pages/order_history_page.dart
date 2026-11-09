@@ -1,6 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
+import '../models/models.dart';
+import 'customer_order_detail_page.dart';
+
 class OrderHistoryPage extends StatefulWidget {
   const OrderHistoryPage({super.key});
 
@@ -178,124 +181,158 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
-                  child: Padding(
-                    padding: const EdgeInsets.all(16),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(
-                              Icons.receipt_long,
-                              color: Color(0xFF1976D2),
-                            ),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                'Đơn hàng #${order['id']}',
+                  child: InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTap: () async {
+                      final orderModel = OrderModel.fromJson(order);
+                      await Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) =>
+                              CustomerOrderDetailPage(order: orderModel),
+                        ),
+                      );
+                      _refreshOrders();
+                    },
+                    child: Padding(
+                      padding: const EdgeInsets.all(16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
+                                Icons.receipt_long,
+                                color: Color(0xFF1976D2),
+                              ),
+                              const SizedBox(width: 8),
+                              Expanded(
+                                child: Text(
+                                  'Đơn hàng #${order['id']}',
+                                  style: const TextStyle(
+                                    fontSize: 17,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              ),
+                              Container(
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 10,
+                                  vertical: 6,
+                                ),
+                                decoration: BoxDecoration(
+                                  color: color.withValues(alpha: 0.12),
+                                  borderRadius: BorderRadius.circular(20),
+                                ),
+                                child: Text(
+                                  _statusText(status),
+                                  style: TextStyle(
+                                    color: color,
+                                    fontWeight: FontWeight.w600,
+                                    fontSize: 12,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const Divider(height: 24),
+                          Text('Ngày đặt: ${_formatDate(order['created_at'])}'),
+                          const SizedBox(height: 8),
+                          Text('Người nhận: ${order['customer_name'] ?? ''}'),
+                          const SizedBox(height: 8),
+                          Text('Số điện thoại: ${order['phone'] ?? ''}'),
+                          const SizedBox(height: 8),
+                          Text('Địa chỉ: ${order['address'] ?? ''}'),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Dịch vụ đã đặt',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          if (items.isEmpty)
+                            const Text('Không có thông tin dịch vụ.')
+                          else
+                            ...items.map((item) {
+                              final service = item['services'];
+                              final name = service is Map
+                                  ? service['name']?.toString() ?? 'Dịch vụ'
+                                  : 'Dịch vụ';
+                              final unit = service is Map
+                                  ? service['unit']?.toString() ?? ''
+                                  : '';
+                              return Padding(
+                                padding: const EdgeInsets.only(bottom: 6),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text('• '),
+                                    Expanded(
+                                      child: Text(
+                                        '$name — ${item['quantity']} $unit',
+                                      ),
+                                    ),
+                                    Text(
+                                      _formatPrice(item['subtotal']),
+                                      style: const TextStyle(
+                                        fontWeight: FontWeight.w500,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            }),
+                          const Divider(height: 24),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Tổng tiền',
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                              Text(
+                                _formatPrice(order['total_price']),
                                 style: const TextStyle(
-                                  fontSize: 17,
+                                  color: Color(0xFF1976D2),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 18,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if ((order['note'] ?? '').toString().isNotEmpty) ...[
+                            const SizedBox(height: 10),
+                            Text('Ghi chú: ${order['note']}'),
+                          ],
+                          const SizedBox(height: 8),
+                          Text(
+                            'Thời gian nhận: ${_formatDate(order['pickup_time'])}',
+                            style: const TextStyle(color: Colors.black54),
+                          ),
+                          const Divider(height: 24),
+                          const Row(
+                            mainAxisAlignment: MainAxisAlignment.end,
+                            children: [
+                              Text(
+                                'Xem chi tiết tiến trình & thanh toán',
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: Color(0xFF1976D2),
                                   fontWeight: FontWeight.bold,
                                 ),
                               ),
-                            ),
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 10,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: color.withValues(alpha: 0.12),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                _statusText(status),
-                                style: TextStyle(
-                                  color: color,
-                                  fontWeight: FontWeight.w600,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        const Divider(height: 24),
-                        Text('Ngày đặt: ${_formatDate(order['created_at'])}'),
-                        const SizedBox(height: 8),
-                        Text('Người nhận: ${order['customer_name'] ?? ''}'),
-                        const SizedBox(height: 8),
-                        Text('Số điện thoại: ${order['phone'] ?? ''}'),
-                        const SizedBox(height: 8),
-                        Text('Địa chỉ: ${order['address'] ?? ''}'),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Dịch vụ đã đặt',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        const SizedBox(height: 8),
-                        if (items.isEmpty)
-                          const Text('Không có thông tin dịch vụ.')
-                        else
-                          ...items.map((item) {
-                            final service = item['services'];
-                            final name = service is Map
-                                ? service['name']?.toString() ?? 'Dịch vụ'
-                                : 'Dịch vụ';
-                            final unit = service is Map
-                                ? service['unit']?.toString() ?? ''
-                                : '';
-                            return Padding(
-                              padding: const EdgeInsets.only(bottom: 6),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  const Text('• '),
-                                  Expanded(
-                                    child: Text(
-                                      '$name — ${item['quantity']} $unit',
-                                    ),
-                                  ),
-                                  Text(
-                                    _formatPrice(item['subtotal']),
-                                    style: const TextStyle(
-                                      fontWeight: FontWeight.w500,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            );
-                          }),
-                        const Divider(height: 24),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            const Text(
-                              'Tổng tiền',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 16,
-                              ),
-                            ),
-                            Text(
-                              _formatPrice(order['total_price']),
-                              style: const TextStyle(
+                              SizedBox(width: 4),
+                              Icon(
+                                Icons.arrow_forward_ios,
+                                size: 12,
                                 color: Color(0xFF1976D2),
-                                fontWeight: FontWeight.bold,
-                                fontSize: 18,
                               ),
-                            ),
-                          ],
-                        ),
-                        if ((order['note'] ?? '').toString().isNotEmpty) ...[
-                          const SizedBox(height: 10),
-                          Text('Ghi chú: ${order['note']}'),
+                            ],
+                          ),
                         ],
-                        const SizedBox(height: 8),
-                        Text(
-                          'Thời gian nhận: ${_formatDate(order['pickup_time'])}',
-                          style: const TextStyle(color: Colors.black54),
-                        ),
-                      ],
+                      ),
                     ),
                   ),
                 );

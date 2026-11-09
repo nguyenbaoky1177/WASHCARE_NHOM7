@@ -1,0 +1,945 @@
+import 'dart:async';
+
+import 'package:flutter/material.dart';
+import 'package:supabase_flutter/supabase_flutter.dart';
+import 'package:url_launcher/url_launcher.dart';
+
+import '../core/app_colors.dart';
+import '../core/notification_service.dart';
+import '../core/request_timeout.dart';
+import '../core/review_service.dart';
+import '../core/supabase_client.dart';
+import '../models/models.dart';
+import '../widgets/momo_payment_dialog.dart';
+import '../widgets/order_review_dialog.dart';
+import '../widgets/order_status_badge.dart';
+
+class CustomerOrderDetailPage extends StatefulWidget {
+  final OrderModel order;
+
+  const CustomerOrderDetailPage({super.key, required this.order});
+
+  @override
+  State<CustomerOrderDetailPage> createState() =>
+      _CustomerOrderDetailPageState();
+}
+
+class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
+  late OrderModel _order;
+  ReviewModel? _review;
+  bool _isLoadingReview = true;
+  bool _isCancelling = false;
+  RealtimeChannel? _realtimeChannel;
+
+  @override
+  void initState() {
+    super.initState();
+    _order = widget.order;
+    _setupRealtime();
+    _loadReview();
+  }
+
+  @override
+  void dispose() {
+    if (_realtimeChannel != null) {
+      supabase.removeChannel(_realtimeChannel!);
+    }
+    super.dispose();
+  }
+
+  void _setupRealtime() {
+    final channelName =
+        'customer_order_detail_${_order.id}_${DateTime.now().millisecondsSinceEpoch}';
+    _realtimeChannel = supabase.channel(channelName);
+
+    _realtimeChannel!
+        .onPostgresChanges(
+          event: PostgresChangeEvent.all,
+          schema: 'public',
+          table: 'orders',
+          filter: PostgresChangeFilter(
+            type: PostgresChangeFilterType.eq,
+            column: 'id',
+            value: _order.id,
+          ),
+          callback: (payload) {
+            _reloadOrder();
+          },
+        )
+        .subscribe();
+  }
+
+  Future<void> _reloadOrder() async {
+    try {
+      final res = await supabase
+          .from('orders')
+          .select('*, order_items(*, services(name, unit))')
+          .eq('id', _order.id)
+          .maybeSingle()
+          .timeout(supabaseRequestTimeout);
+
+      if (res != null && mounted) {
+        setState(() {
+          _order = OrderModel.fromJson(res);
+        });
+        if (_order.isCompleted) {
+          _loadReview();
+        }
+      }
+    } catch (e) {
+      debugPrint('CustomerOrderDetailPage reload error: $e');
+    }
+  }
+
+  Future<void> _loadReview() async {
+    try {
+      final review = await ReviewService.getReviewForOrder(_order.id);
+      if (mounted) {
+        setState(() {
+          _review = review;
+          _isLoadingReview = false;
+        });
+      }
+    } catch (_) {
+      if (mounted) {
+        setState(() => _isLoadingReview = false);
+      }
+    }
+  }
+
+  Future<void> _callHotline() async {
+    final uri = Uri.parse('tel:19001234');
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri);
+    }
+  }
+
+  Future<void> _cancelOrder() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Xác nhận hủy đơn'),
+        content: Text(
+          'Bạn có chắc chắn muốn hủy đơn hàng #${_order.id} không?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx, false),
+            child: const Text('Không'),
+          ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () => Navigator.pop(ctx, true),
+            child: const Text('Hủy đơn'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed != true || !mounted) return;
+
+    setState(() => _isCancelling = true);
+
+    try {
+      final user = supabase.auth.currentUser;
+      if (user == null) throw Exception('Bạn chưa đăng nhập.');
+
+      await supabase
+          .from('orders')
+          .update({'status': 'cancelled'})
+          .eq('id', _order.id)
+          .eq('user_id', user.id)
+          .eq('status', 'pending');
+
+      await NotificationService.notifyOrderStatusChange(
+        _order.id,
+        'cancelled',
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Đã hủy đơn hàng thành công')),
+      );
+
+      await _reloadOrder();
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Hủy đơn thất bại: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _isCancelling = false);
+    }
+  }
+
+  Future<void> _openMomoPayment() async {
+    final paid = await MomoPaymentDialog.show(
+      context: context,
+      orderId: _order.id,
+      amount: _order.totalPrice,
+    );
+
+    if (paid == true) {
+      await _reloadOrder();
+    }
+  }
+
+  Future<void> _openReviewDialog() async {
+    final result = await OrderReviewDialog.show(
+      context,
+      order: _order,
+      initialReview: _review,
+    );
+
+    if (result != null) {
+      _loadReview();
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: const Color(0xFFF4F7FB),
+      appBar: AppBar(
+        title: Text(
+          'Chi tiết đơn #${_order.id}',
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        backgroundColor: darkBlue,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            tooltip: 'Làm mới',
+            onPressed: _reloadOrder,
+          ),
+        ],
+      ),
+      bottomNavigationBar: _buildBottomActionBar(),
+      body: RefreshIndicator(
+        onRefresh: _reloadOrder,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 32),
+          children: [
+            // 1. Trạng thái & Tiến trình xử lý
+            _buildStatusHeaderCard(),
+            const SizedBox(height: 16),
+
+            // 2. Timeline Tiến trình các bước
+            if (!_order.isCancelled) ...[
+              _buildTimelineCard(),
+              const SizedBox(height: 16),
+            ],
+
+            // 3. Thông tin người nhận và lịch hẹn
+            _buildDeliveryInfoCard(),
+            const SizedBox(height: 16),
+
+            // 4. Danh sách dịch vụ
+            _buildItemsListCard(),
+            const SizedBox(height: 16),
+
+            // 5. Tóm tắt chi phí & Thanh toán
+            _buildPaymentSummaryCard(),
+            const SizedBox(height: 16),
+
+            // 6. Đánh giá dịch vụ (nếu đơn đã hoàn thành)
+            if (_order.isCompleted) ...[
+              _buildReviewSectionCard(),
+              const SizedBox(height: 16),
+            ],
+
+            // 7. Cần trợ giúp?
+            _buildSupportBanner(),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatusHeaderCard() {
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: _order.statusColor.withValues(alpha: 0.12),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                _order.statusIcon,
+                color: _order.statusColor,
+                size: 28,
+              ),
+            ),
+            const SizedBox(width: 14),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Đơn hàng #${_order.id}',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: darkBlue,
+                        ),
+                      ),
+                      OrderStatusBadge(order: _order),
+                    ],
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Đặt lúc: ${_order.formattedCreatedAt}',
+                    style: const TextStyle(
+                      fontSize: 12,
+                      color: Colors.black54,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTimelineCard() {
+    final stages = [
+      {'key': 'pending', 'title': 'Chờ xác nhận', 'desc': 'Tiệm đang tiếp nhận đơn'},
+      {'key': 'confirmed', 'title': 'Đã xác nhận', 'desc': 'Tài xế nhận lịch lấy đồ'},
+      {'key': 'washing', 'title': 'Đang xử lý', 'desc': 'Đang phân loại và giặt sấy'},
+      {'key': 'delivering', 'title': 'Đang giao', 'desc': 'Đang trên đường giao trả đồ'},
+      {'key': 'completed', 'title': 'Hoàn thành', 'desc': 'Đã hoàn tất đơn hàng'},
+    ];
+
+    int currentStep = 0;
+    switch (_order.status) {
+      case 'pending':
+        currentStep = 0;
+        break;
+      case 'confirmed':
+        currentStep = 1;
+        break;
+      case 'washing':
+        currentStep = 2;
+        break;
+      case 'delivering':
+        currentStep = 3;
+        break;
+      case 'completed':
+        currentStep = 4;
+        break;
+      default:
+        currentStep = 0;
+    }
+
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.route_outlined, color: primaryBlue, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Tiến trình xử lý',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            for (int i = 0; i < stages.length; i++) ...[
+              Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Column(
+                    children: [
+                      Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: i <= currentStep ? primaryBlue : Colors.grey.shade300,
+                        ),
+                        child: Icon(
+                          i < currentStep
+                              ? Icons.check
+                              : (i == currentStep ? Icons.circle : Icons.circle_outlined),
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                      if (i < stages.length - 1)
+                        Container(
+                          width: 2,
+                          height: 36,
+                          color: i < currentStep ? primaryBlue : Colors.grey.shade300,
+                        ),
+                    ],
+                  ),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            stages[i]['title']!,
+                            style: TextStyle(
+                              fontSize: 14,
+                              fontWeight: i == currentStep
+                                  ? FontWeight.bold
+                                  : (i < currentStep
+                                      ? FontWeight.w600
+                                      : FontWeight.normal),
+                              color: i <= currentStep ? darkBlue : Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(height: 2),
+                          Text(
+                            stages[i]['desc']!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: i == currentStep
+                                  ? primaryBlue
+                                  : Colors.black45,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildDeliveryInfoCard() {
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.local_shipping_outlined, color: primaryBlue, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Thông tin giao nhận đồ',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            _buildInfoRow(
+              icon: Icons.calendar_today_outlined,
+              label: 'Thời gian lấy đồ hẹn trước',
+              value: _order.formattedPickupTime,
+              highlight: true,
+            ),
+            const SizedBox(height: 12),
+            _buildInfoRow(
+              icon: Icons.person_outline,
+              label: 'Khách hàng',
+              value: '${_order.customerName} • ${_order.phone}',
+            ),
+            const SizedBox(height: 12),
+            _buildInfoRow(
+              icon: Icons.location_on_outlined,
+              label: 'Địa chỉ lấy & giao đồ',
+              value: _order.address,
+            ),
+            if (_order.note != null && _order.note!.trim().isNotEmpty) ...[
+              const SizedBox(height: 12),
+              _buildInfoRow(
+                icon: Icons.edit_note,
+                label: 'Ghi chú cho tiệm',
+                value: _order.note!,
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String label,
+    required String value,
+    bool highlight = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 18, color: highlight ? primaryBlue : Colors.black45),
+        const SizedBox(width: 10),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: const TextStyle(fontSize: 11, color: Colors.black54),
+              ),
+              const SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: highlight ? FontWeight.bold : FontWeight.w500,
+                  color: highlight ? primaryBlue : Colors.black87,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildItemsListCard() {
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.dry_cleaning_outlined, color: primaryBlue, size: 20),
+                    SizedBox(width: 8),
+                    Text(
+                      'Dịch vụ đã chọn',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: darkBlue,
+                      ),
+                    ),
+                  ],
+                ),
+                Text(
+                  '${_order.items.length} món',
+                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            if (_order.items.isEmpty)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.symmetric(vertical: 16),
+                  child: Text('Không có thông tin chi tiết dịch vụ'),
+                ),
+              )
+            else
+              ListView.separated(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: _order.items.length,
+                separatorBuilder: (_, __) => const Divider(height: 16),
+                itemBuilder: (context, index) {
+                  final item = _order.items[index];
+                  return Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: paleBlue,
+                          borderRadius: BorderRadius.circular(8),
+                        ),
+                        child: const Icon(
+                          Icons.local_laundry_service,
+                          size: 18,
+                          color: primaryBlue,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              item.serviceName,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.bold,
+                                color: darkBlue,
+                              ),
+                            ),
+                            Text(
+                              'Số lượng: ${item.formattedQuantity} ${item.serviceUnit}',
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.black54,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      Text(
+                        item.formattedSubtotal,
+                        style: const TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: darkBlue,
+                        ),
+                      ),
+                    ],
+                  );
+                },
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildPaymentSummaryCard() {
+    final isMomo = _order.paymentMethod == 'momo';
+    final isMomoPaid = _order.momoPaymentStatus == 'paid';
+
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Row(
+              children: [
+                Icon(Icons.receipt_outlined, color: primaryBlue, size: 20),
+                SizedBox(width: 8),
+                Text(
+                  'Chi tiết thanh toán',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 24),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Phương thức thanh toán',
+                    style: TextStyle(color: Colors.black54)),
+                Row(
+                  children: [
+                    Icon(
+                      isMomo ? Icons.account_balance_wallet : Icons.money,
+                      size: 16,
+                      color: isMomo ? const Color(0xFFA50064) : Colors.green,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      isMomo ? 'Ví MoMo' : 'Tiền mặt (COD)',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text('Trạng thái thanh toán',
+                    style: TextStyle(color: Colors.black54)),
+                Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                  decoration: BoxDecoration(
+                    color: (isMomoPaid || _order.isCompleted)
+                        ? Colors.green.withValues(alpha: 0.12)
+                        : Colors.orange.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(6),
+                  ),
+                  child: Text(
+                    isMomo
+                        ? (isMomoPaid ? 'Đã thanh toán' : 'Chưa thanh toán')
+                        : (_order.isCompleted
+                            ? 'Đã thu tiền'
+                            : 'Thanh toán khi nhận đồ'),
+                    style: TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                      color: (isMomoPaid || _order.isCompleted)
+                          ? Colors.green
+                          : Colors.orange.shade800,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const Divider(height: 20),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'Tổng cộng',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
+                ),
+                Text(
+                  _order.formattedTotalPrice,
+                  style: const TextStyle(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFFD64545),
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReviewSectionCard() {
+    if (_isLoadingReview) {
+      return const Card(
+        child: Padding(
+          padding: EdgeInsets.all(16),
+          child: Center(child: CircularProgressIndicator()),
+        ),
+      );
+    }
+
+    return Card(
+      elevation: 1,
+      color: Colors.white,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.star_rate_rounded, color: Colors.amber, size: 22),
+                    SizedBox(width: 8),
+                    Text(
+                      'Đánh giá của bạn',
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: darkBlue,
+                      ),
+                    ),
+                  ],
+                ),
+                if (_review != null)
+                  TextButton.icon(
+                    onPressed: _openReviewDialog,
+                    icon: const Icon(Icons.edit, size: 16),
+                    label: const Text('Sửa'),
+                  ),
+              ],
+            ),
+            const Divider(height: 20),
+            if (_review == null) ...[
+              const Text(
+                'Bạn hài lòng với dịch vụ của WashCare chứ? Hãy để lại đánh giá nhé!',
+                style: TextStyle(fontSize: 13, color: Colors.black54),
+              ),
+              const SizedBox(height: 12),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: primaryBlue,
+                    side: const BorderSide(color: primaryBlue),
+                  ),
+                  onPressed: _openReviewDialog,
+                  icon: const Icon(Icons.rate_review_outlined),
+                  label: const Text('Viết đánh giá'),
+                ),
+              ),
+            ] else ...[
+              Row(
+                children: List.generate(5, (index) {
+                  return Icon(
+                    index < _review!.rating ? Icons.star : Icons.star_border,
+                    color: Colors.amber,
+                    size: 20,
+                  );
+                }),
+              ),
+              if (_review!.comment != null &&
+                  _review!.comment!.trim().isNotEmpty) ...[
+                const SizedBox(height: 8),
+                Text(
+                  _review!.comment!,
+                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                ),
+              ],
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSupportBanner() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: paleBlue,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: const Color(0xFFD0E1F4)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(10),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: const Icon(Icons.headset_mic_outlined, color: primaryBlue),
+          ),
+          const SizedBox(width: 12),
+          const Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Cần hỗ trợ về đơn hàng này?',
+                  style: TextStyle(
+                    fontSize: 13,
+                    fontWeight: FontWeight.bold,
+                    color: darkBlue,
+                  ),
+                ),
+                Text(
+                  'Hotline 1900 1234 (08:00 - 21:00)',
+                  style: TextStyle(fontSize: 11, color: Colors.black54),
+                ),
+              ],
+            ),
+          ),
+          IconButton.filled(
+            style: IconButton.styleFrom(
+              backgroundColor: primaryBlue,
+              foregroundColor: Colors.white,
+            ),
+            icon: const Icon(Icons.call, size: 18),
+            onPressed: _callHotline,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget? _buildBottomActionBar() {
+    final canCancel = _order.canCancel;
+    final canPayMomo = _order.paymentMethod == 'momo' &&
+        _order.momoPaymentStatus != 'paid' &&
+        !_order.isCancelled;
+
+    if (!canCancel && !canPayMomo) return null;
+
+    return Container(
+      color: Colors.white,
+      padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
+      child: SafeArea(
+        top: false,
+        child: Row(
+          children: [
+            if (canCancel)
+              Expanded(
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.redAccent),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _isCancelling ? null : _cancelOrder,
+                  icon: _isCancelling
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.cancel_outlined, size: 18),
+                  label: Text(_isCancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
+                ),
+              ),
+            if (canCancel && canPayMomo) const SizedBox(width: 12),
+            if (canPayMomo)
+              Expanded(
+                child: FilledButton.icon(
+                  style: FilledButton.styleFrom(
+                    backgroundColor: const Color(0xFFA50064),
+                    padding: const EdgeInsets.symmetric(vertical: 12),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  onPressed: _openMomoPayment,
+                  icon: const Icon(Icons.payment, size: 18),
+                  label: const Text('Thanh toán MoMo'),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}

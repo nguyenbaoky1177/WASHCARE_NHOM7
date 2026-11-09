@@ -11,6 +11,7 @@ import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'active_orders_page.dart';
+import 'customer_order_detail_page.dart';
 import 'notifications_page.dart';
 import 'order_page.dart';
 
@@ -465,7 +466,7 @@ class _HomePageState extends State<HomePage> {
                 context,
                 MaterialPageRoute(
                   builder: (_) =>
-                      OrderDetailPage(order: order, onCancel: () async {}),
+                      CustomerOrderDetailPage(order: order),
                 ),
               );
               _refresh();

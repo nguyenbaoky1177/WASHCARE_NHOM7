@@ -12,6 +12,7 @@ import '../core/supabase_client.dart';
 import '../widgets/momo_payment_card.dart';
 import '../models/models.dart';
 import '../widgets/order_review_dialog.dart';
+import 'customer_order_detail_page.dart';
 
 class ActiveOrdersPage extends StatefulWidget {
   const ActiveOrdersPage({super.key, this.isVisible = true});
@@ -388,7 +389,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       context,
       MaterialPageRoute(
         builder: (_) =>
-            OrderDetailPage(order: order, onCancel: () => _cancelOrder(order)),
+            CustomerOrderDetailPage(order: order),
       ),
     );
 

@@ -13,6 +13,7 @@ import '../core/supabase_client.dart';
 import '../core/momo_payment_service.dart';
 import '../widgets/momo_payment_dialog.dart';
 import '../models/models.dart';
+import 'saved_addresses_page.dart';
 
 class OrderPage extends StatefulWidget {
   const OrderPage({super.key});
@@ -99,6 +100,26 @@ class _OrderPageState extends State<OrderPage> {
       }
     } finally {
       if (mounted) setState(() => _loading = false);
+    }
+  }
+
+  Future<void> _selectFromAddressBook() async {
+    final selected = await Navigator.push<AddressModel>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => const SavedAddressesPage(isSelectMode: true),
+      ),
+    );
+    if (selected != null && mounted) {
+      setState(() {
+        _addressController.text = selected.fullAddress;
+        if (selected.recipientName.isNotEmpty) {
+          _nameController.text = selected.recipientName;
+        }
+        if (selected.phoneNumber.isNotEmpty) {
+          _phoneController.text = selected.phoneNumber;
+        }
+      });
     }
   }
 
@@ -821,7 +842,7 @@ class _OrderPageState extends State<OrderPage> {
         children: [
           TextFormField(
             controller: _nameController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Họ và tên người nhận *',
               prefixIcon: Icon(Icons.person_outline),
             ),
@@ -831,7 +852,7 @@ class _OrderPageState extends State<OrderPage> {
           TextFormField(
             controller: _phoneController,
             keyboardType: TextInputType.phone,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Số điện thoại liên hệ *',
               prefixIcon: Icon(Icons.phone_outlined),
             ),
@@ -847,11 +868,37 @@ class _OrderPageState extends State<OrderPage> {
           const SizedBox(height: 12),
           TextFormField(
             controller: _addressController,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Địa chỉ nhận và giao đồ *',
-              prefixIcon: Icon(Icons.location_on_outlined),
+              prefixIcon: const Icon(Icons.location_on_outlined),
+              suffixIcon: IconButton(
+                icon: const Icon(Icons.bookmark_outline, color: primaryBlue),
+                tooltip: 'Chọn từ sổ địa chỉ',
+                onPressed: _selectFromAddressBook,
+              ),
             ),
             validator: (v) => v == null || v.trim().isEmpty ? 'Nhập địa chỉ nhận đồ' : null,
+          ),
+          const SizedBox(height: 6),
+          Align(
+            alignment: Alignment.centerLeft,
+            child: ActionChip(
+              avatar: const Icon(Icons.bookmark_rounded, size: 14, color: primaryBlue),
+              label: const Text(
+                'Chọn từ sổ địa chỉ',
+                style: TextStyle(
+                  fontSize: 11,
+                  color: primaryBlue,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+              backgroundColor: paleBlue,
+              side: BorderSide.none,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
+              ),
+              onPressed: _selectFromAddressBook,
+            ),
           ),
           if (_savedAddress.isNotEmpty) ...[
             const SizedBox(height: 6),
@@ -884,7 +931,7 @@ class _OrderPageState extends State<OrderPage> {
           TextFormField(
             controller: _noteController,
             maxLines: 2,
-            decoration: const InputDecoration(
+            decoration: InputDecoration(
               labelText: 'Ghi chú cho xưởng giặt (nếu có)',
               hintText: 'Ví dụ: giặt riêng áo trắng, ủi li phẳng...',
               prefixIcon: Icon(Icons.edit_note),
@@ -909,7 +956,7 @@ class _OrderPageState extends State<OrderPage> {
             child: TextField(
               controller: _voucherController,
               textCapitalization: TextCapitalization.characters,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 hintText: 'Nhập mã: WASHCARE20',
                 prefixIcon: Icon(
                   Icons.confirmation_num_outlined,

@@ -7,6 +7,7 @@ import '../core/profile_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'admin/admin_hub_page.dart';
+import 'saved_addresses_page.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -935,6 +936,20 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                     child: Column(
                       children: [
+                        _actionTile(
+                          icon: Icons.location_on_outlined,
+                          title: 'Sổ địa chỉ đã lưu',
+                          subtitle: 'Quản lý địa chỉ giao nhận đồ',
+                          onTap: () {
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => const SavedAddressesPage(),
+                              ),
+                            );
+                          },
+                        ),
+                        const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.support_agent_outlined,
                           title: 'Trung tâm hỗ trợ',
