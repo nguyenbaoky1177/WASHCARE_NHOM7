@@ -365,12 +365,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
             showCheckmark: false,
             label: Text('${filter.$2} (${_countOrders(orders, filter.$1)})'),
             selectedColor: _primary,
-            backgroundColor: Colors.white,
+            backgroundColor: context.cardSurface,
             side: BorderSide(
-              color: selected ? _primary : const Color(0xFFDDE5EF),
+              color: selected ? _primary : context.cardOutline,
             ),
             labelStyle: TextStyle(
-              color: selected ? Colors.white : const Color(0xFF44546A),
+              color: selected ? Colors.white : context.mutedColor,
               fontWeight: selected ? FontWeight.w600 : FontWeight.normal,
             ),
             onSelected: (_) {
@@ -405,7 +405,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
 
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
-      color: Colors.white,
+      color: context.cardSurface,
       elevation: 1,
       shadowColor: Colors.black.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
@@ -451,8 +451,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                         const SizedBox(height: 5),
                         Text(
                           order.formattedCreatedAt,
-                          style: const TextStyle(
-                            color: Colors.black54,
+                          style: TextStyle(
+                            color: context.mutedColor,
                             fontSize: 12,
                           ),
                         ),
@@ -504,10 +504,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 order.address.isNotEmpty ? order.address : 'Chưa có địa chỉ',
               ),
               const SizedBox(height: 16),
-              const Text(
+              Text(
                 'DỊCH VỤ',
                 style: TextStyle(
-                  color: Colors.black54,
+                  color: context.mutedColor,
                   fontSize: 11,
                   fontWeight: FontWeight.bold,
                   letterSpacing: 0.8,
@@ -515,9 +515,9 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               ),
               const SizedBox(height: 10),
               if (order.items.isEmpty)
-                const Text(
+                Text(
                   'Chưa có thông tin dịch vụ.',
-                  style: TextStyle(color: Colors.black54),
+                  style: TextStyle(color: context.mutedColor),
                 )
               else
                 ...order.items.map((item) {
@@ -534,7 +534,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                         Expanded(child: Text(item.serviceName)),
                         Text(
                           '${item.formattedQuantity} ${item.serviceUnit}',
-                          style: const TextStyle(color: Colors.black54),
+                          style: TextStyle(color: context.mutedColor),
                         ),
                       ],
                     ),
@@ -692,7 +692,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: Colors.black54),
+        Icon(icon, size: 18, color: context.mutedColor),
         const SizedBox(width: 8),
         Expanded(child: Text(text)),
       ],
@@ -730,9 +730,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surface
-          : _background,
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Row(
           children: [
@@ -798,10 +796,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
-                    const Text(
+                    Text(
                       'Vui lòng kiểm tra kết nối Internet và thử lại.',
                       textAlign: TextAlign.center,
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                      style: TextStyle(fontSize: 12, color: context.mutedColor),
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
@@ -826,11 +824,11 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Padding(
+                    Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
                         'Theo dõi đơn giặt ủi của bạn (cập nhật trực tiếp)',
-                        style: TextStyle(fontSize: 14, color: Colors.black54),
+                        style: TextStyle(fontSize: 14, color: context.mutedColor),
                       ),
                     ),
                     const SizedBox(height: 14),
@@ -999,7 +997,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: const Color(0xFFF5C2C2)),
         ),
-        child: const Row(
+        child: Row(
           children: [
             Icon(Icons.cancel, color: Color(0xFFD64545), size: 28),
             SizedBox(width: 12),
@@ -1018,7 +1016,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                   SizedBox(height: 3),
                   Text(
                     'Đơn hàng này đã bị hủy và không còn được xử lý.',
-                    style: TextStyle(color: Colors.black54, fontSize: 13),
+                    style: TextStyle(color: context.mutedColor, fontSize: 13),
                   ),
                 ],
               ),
@@ -1042,17 +1040,17 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'TIẾN TRÌNH XỬ LÝ ĐƠN HÀNG',
             style: TextStyle(
-              color: Colors.black54,
+              color: context.mutedColor,
               fontSize: 11,
               fontWeight: FontWeight.bold,
               letterSpacing: 0.8,
@@ -1067,7 +1065,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                 return Expanded(
                   child: Container(
                     height: 3,
-                    color: isDone ? _primary : const Color(0xFFE2E8F0),
+                    color: isDone ? _primary : context.cardOutline,
                   ),
                 );
               }
@@ -1085,7 +1083,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                     width: 38,
                     height: 38,
                     decoration: BoxDecoration(
-                      color: isPassed ? _primary : const Color(0xFFF1F5F9),
+                      color: isPassed ? _primary : context.insetSurface,
                       shape: BoxShape.circle,
                       border: isCurrent
                           ? Border.all(
@@ -1108,7 +1106,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       fontWeight: isCurrent ? FontWeight.bold : FontWeight.w500,
                       color: isCurrent
                           ? _primary
-                          : (isPassed ? Colors.black87 : Colors.black45),
+                          : (isPassed ? context.detailColor : context.mutedColor),
                     ),
                   ),
                 ],
@@ -1128,7 +1126,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         children: [
           SizedBox(
             width: 125,
-            child: Text(title, style: const TextStyle(color: Colors.black54)),
+            child: Text(title, style: TextStyle(color: context.mutedColor)),
           ),
           Expanded(
             child: Text(
@@ -1145,7 +1143,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Row(
           children: [
@@ -1183,7 +1181,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
         children: [
           _buildStatusStepper(_order.status),
           Card(
-            color: Colors.white,
+            color: context.cardSurface,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -1194,10 +1192,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'TRẠNG THÁI ĐƠN HÀNG',
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: context.mutedColor,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1241,7 +1239,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           ),
           const SizedBox(height: 16),
           Card(
-            color: Colors.white,
+            color: context.cardSurface,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -1252,10 +1250,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'DỊCH VỤ ĐÃ ĐẶT',
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: context.mutedColor,
                       fontSize: 12,
                       fontWeight: FontWeight.bold,
                     ),
@@ -1284,7 +1282,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             ),
                             Text(
                               '${item.formattedQuantity} ${item.serviceUnit}',
-                              style: const TextStyle(color: Colors.black54),
+                              style: TextStyle(color: context.mutedColor),
                             ),
                             if (item.subtotal > 0) ...[
                               const SizedBox(width: 12),
@@ -1332,12 +1330,12 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: Colors.white,
+                color: context.cardSurface,
                 borderRadius: BorderRadius.circular(18),
                 border: Border.all(
                   color: _review != null
                       ? Colors.amber.withValues(alpha: 0.3)
-                      : const Color(0xFFE4ECF5),
+                      : context.cardOutline,
                 ),
               ),
               child: Column(
@@ -1375,9 +1373,9 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                             const SizedBox(height: 3),
                             Text(
                               _review != null ? _review!.ratingLabel : 'Chia sẻ cảm nhận giúp WashCare nâng cao chất lượng',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.black54,
+                                color: context.mutedColor,
                               ),
                             ),
                           ],
@@ -1437,10 +1435,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
                       const SizedBox(height: 8),
                       Text(
                         '"${_review!.comment}"',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 13,
                           fontStyle: FontStyle.italic,
-                          color: Colors.black87,
+                          color: context.detailColor,
                         ),
                       ),
                     ],
@@ -1455,7 +1453,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               width: double.infinity,
               child: FilledButton.icon(
                 style: FilledButton.styleFrom(
-                  backgroundColor: Colors.red,
+                  backgroundColor: Colors.red, foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 14),
                 ),
                 onPressed: () async {
@@ -1469,10 +1467,10 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
               ),
             ),
             const SizedBox(height: 8),
-            const Text(
+            Text(
               'Bạn chỉ có thể hủy đơn khi đơn đang chờ xác nhận.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.black54, fontSize: 12),
+              style: TextStyle(color: context.mutedColor, fontSize: 12),
             ),
           ],
           const SizedBox(height: 24),

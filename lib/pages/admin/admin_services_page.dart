@@ -329,7 +329,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: const Text('Quản lý Dịch vụ & Giá cước'),
         backgroundColor: darkBlue,
@@ -386,12 +386,12 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
 
                 return Card(
                   margin: const EdgeInsets.only(bottom: 12),
-                  color: Colors.white,
+                  color: context.cardSurface,
                   elevation: 0.5,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                     side: BorderSide(
-                      color: s.isActive ? const Color(0xFFE4ECF5) : Colors.red.shade100,
+                      color: s.isActive ? context.cardOutline : Colors.red.shade100,
                     ),
                   ),
                   child: Padding(
@@ -403,7 +403,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: s.isActive ? paleBlue : Colors.grey.shade100,
+                            color: s.isActive ? context.accentSurface : Colors.grey.shade100,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
@@ -425,7 +425,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                                       style: TextStyle(
                                         fontSize: 16,
                                         fontWeight: FontWeight.bold,
-                                        color: s.isActive ? darkBlue : Colors.grey,
+                                        color: s.isActive ? context.headingColor : Colors.grey,
                                       ),
                                     ),
                                   ),
@@ -441,7 +441,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                               if (s.description.isNotEmpty) ...[
                                 Text(
                                   s.description,
-                                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                                  style: TextStyle(fontSize: 12, color: context.mutedColor),
                                 ),
                                 const SizedBox(height: 4),
                               ],

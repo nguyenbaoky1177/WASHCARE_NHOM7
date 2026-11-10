@@ -21,7 +21,7 @@ class OrderCheckoutBar extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 20),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.06),
@@ -37,9 +37,9 @@ class OrderCheckoutBar extends StatelessWidget {
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
+                Text(
                   'Tổng thanh toán:',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: context.mutedColor),
                 ),
                 Text(
                   total,
@@ -56,7 +56,7 @@ class OrderCheckoutBar extends StatelessWidget {
             height: 48,
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: primaryBlue,
+                backgroundColor: primaryBlue, foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),

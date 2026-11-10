@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../core/notification_service.dart';
 import '../core/profile_cache.dart';
 import '../core/service_cache.dart';
@@ -182,9 +183,7 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surface
-          : backgroundColor,
+      backgroundColor: context.pageSurface,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refresh,
@@ -229,7 +228,7 @@ class _HomePageState extends State<HomePage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Dịch vụ giặt ủi',
+                          AppSettings.text(context, 'Dịch vụ giặt ủi', 'Laundry services'),
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
@@ -238,7 +237,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                         const SizedBox(height: 2),
                         Text(
-                          'Bảng giá niêm yết, chăm sóc tận tâm',
+                          AppSettings.text(context, 'Bảng giá niêm yết, chăm sóc tận tâm', 'Upfront pricing and careful service'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
@@ -254,7 +253,7 @@ class _HomePageState extends State<HomePage> {
                         }
                       },
                       style: FilledButton.styleFrom(
-                        backgroundColor: primaryBlue,
+                        backgroundColor: primaryBlue, foregroundColor: Colors.white,
                         padding: const EdgeInsets.symmetric(
                           horizontal: 14,
                           vertical: 8,
@@ -264,7 +263,7 @@ class _HomePageState extends State<HomePage> {
                         ),
                       ),
                       icon: const Icon(Icons.add, size: 16),
-                      label: const Text('Đặt đơn'),
+                      label: Text(AppSettings.text(context, 'Đặt đơn', 'Book now')),
                     ),
                   ],
                 ),
@@ -295,7 +294,7 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildTopHeader() {
     return Container(
-      color: Colors.white,
+      color: context.cardSurface,
       padding: const EdgeInsets.fromLTRB(18, 14, 18, 14),
       child: Row(
         children: [
@@ -303,12 +302,12 @@ class _HomePageState extends State<HomePage> {
             width: 44,
             height: 44,
             decoration: BoxDecoration(
-              color: paleBlue,
+              color: context.accentSurface,
               borderRadius: BorderRadius.circular(14),
             ),
-            child: const Icon(
+            child: Icon(
               Icons.local_laundry_service,
-              color: primaryBlue,
+              color: context.accentColor,
               size: 26,
             ),
           ),
@@ -327,9 +326,9 @@ class _HomePageState extends State<HomePage> {
                   children: [
                     Text(
                       _getGreeting(),
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: primaryBlue,
+                        color: context.accentColor,
                         fontWeight: FontWeight.w600,
                       ),
                     ),
@@ -338,10 +337,10 @@ class _HomePageState extends State<HomePage> {
                       name,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 17,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                   ],
@@ -355,9 +354,9 @@ class _HomePageState extends State<HomePage> {
               IconButton(
                 tooltip: 'Thông báo',
                 onPressed: _openNotifications,
-                icon: const Icon(
+                icon: Icon(
                   Icons.notifications_none_rounded,
-                  color: primaryBlue,
+                  color: context.accentColor,
                 ),
               ),
               if (_unreadNotificationCount > 0)
@@ -390,7 +389,7 @@ class _HomePageState extends State<HomePage> {
           IconButton(
             tooltip: 'Hỗ trợ khách hàng',
             onPressed: _callHotline,
-            icon: const Icon(Icons.headset_mic_outlined, color: primaryBlue),
+            icon: Icon(Icons.headset_mic_outlined, color: context.accentColor),
           ),
         ],
       ),
@@ -402,7 +401,7 @@ class _HomePageState extends State<HomePage> {
       margin: const EdgeInsets.fromLTRB(18, 14, 18, 4),
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: order.statusColor.withValues(alpha: 0.3)),
         boxShadow: [
@@ -452,14 +451,14 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 3),
                 Text(
                   'Hẹn lấy: ${order.formattedPickupTime}',
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: context.mutedColor),
                 ),
               ],
             ),
           ),
           TextButton(
             style: TextButton.styleFrom(
-              foregroundColor: primaryBlue,
+              foregroundColor: context.accentColor,
               padding: const EdgeInsets.symmetric(horizontal: 10),
             ),
             onPressed: () async {
@@ -472,11 +471,11 @@ class _HomePageState extends State<HomePage> {
               );
               _refresh();
             },
-            child: const Row(
+            child: Row(
               mainAxisSize: MainAxisSize.min,
               children: [
                 Text(
-                  'Theo dõi',
+                  AppSettings.text(context, 'Theo dõi', 'Track order'),
                   style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
                 ),
                 Icon(Icons.chevron_right, size: 16),
@@ -601,16 +600,16 @@ class _HomePageState extends State<HomePage> {
 
   Widget _buildCategoryShortcuts() {
     final categories = [
-      ('Giặt sấy', Icons.local_laundry_service, paleBlue, primaryBlue),
+      (AppSettings.text(context, 'Giặt sấy', 'Wash & dry'), Icons.local_laundry_service, paleBlue, primaryBlue),
       (
-        'Giặt hấp',
+        AppSettings.text(context, 'Giặt hấp', 'Dry cleaning'),
         Icons.dry_cleaning,
         const Color(0xFFF3E8FF),
         const Color(0xFF9333EA),
       ),
-      ('Ủi / Là', Icons.iron, const Color(0xFFFEF3C7), const Color(0xFFD97706)),
+      (AppSettings.text(context, 'Ủi / Là', 'Ironing'), Icons.iron, const Color(0xFFFEF3C7), const Color(0xFFD97706)),
       (
-        'Vệ sinh giày',
+        AppSettings.text(context, 'Vệ sinh giày', 'Shoe care'),
         Icons.directions_walk,
         const Color(0xFFDCFCE7),
         const Color(0xFF16A34A),
@@ -622,6 +621,9 @@ class _HomePageState extends State<HomePage> {
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: categories.map((c) {
+          final iconColor = context.isDarkTheme
+              ? Color.lerp(c.$4, Colors.white, 0.38)!
+              : c.$4;
           return InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () {
@@ -636,18 +638,23 @@ class _HomePageState extends State<HomePage> {
                   width: 60,
                   height: 60,
                   decoration: BoxDecoration(
-                    color: c.$3,
+                    color: context.isDarkTheme
+                        ? Color.alphaBlend(
+                            iconColor.withValues(alpha: 0.15),
+                            context.cardSurface,
+                          )
+                        : c.$3,
                     borderRadius: BorderRadius.circular(18),
                   ),
-                  child: Icon(c.$2, color: c.$4, size: 28),
+                  child: Icon(c.$2, color: iconColor, size: 28),
                 ),
                 const SizedBox(height: 6),
                 Text(
                   c.$1,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
               ],
@@ -698,9 +705,9 @@ class _HomePageState extends State<HomePage> {
                 margin: const EdgeInsets.only(bottom: 12),
                 padding: const EdgeInsets.all(14),
                 decoration: BoxDecoration(
-                  color: Colors.white,
+                  color: context.cardSurface,
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(color: const Color(0xFFE4ECF5)),
+                  border: Border.all(color: context.cardOutline),
                   boxShadow: [
                     BoxShadow(
                       color: Colors.blue.withValues(alpha: 0.03),
@@ -715,13 +722,13 @@ class _HomePageState extends State<HomePage> {
                       width: 54,
                       height: 54,
                       decoration: BoxDecoration(
-                        color: paleBlue,
+                        color: context.accentSurface,
                         borderRadius: BorderRadius.circular(16),
                       ),
                       child: Icon(
                         service.iconData,
                         size: 28,
-                        color: primaryBlue,
+                        color: context.accentColor,
                       ),
                     ),
                     const SizedBox(width: 14),
@@ -731,10 +738,10 @@ class _HomePageState extends State<HomePage> {
                         children: [
                           Text(
                             service.name,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: darkBlue,
+                              color: context.headingColor,
                             ),
                           ),
                           if (service.description.isNotEmpty) ...[
@@ -743,8 +750,8 @@ class _HomePageState extends State<HomePage> {
                               service.description,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
-                              style: const TextStyle(
-                                color: Colors.grey,
+                              style: TextStyle(
+                                color: context.mutedColor,
                                 fontSize: 12,
                               ),
                             ),
@@ -752,8 +759,8 @@ class _HomePageState extends State<HomePage> {
                           const SizedBox(height: 6),
                           Text(
                             '${service.formattedPrice} đ / ${service.unit}',
-                            style: const TextStyle(
-                              color: primaryBlue,
+                            style: TextStyle(
+                              color: context.accentColor,
                               fontSize: 15,
                               fontWeight: FontWeight.bold,
                             ),
@@ -762,9 +769,9 @@ class _HomePageState extends State<HomePage> {
                       ),
                     ),
                     IconButton(
-                      icon: const Icon(
+                      icon: Icon(
                         Icons.add_circle,
-                        color: primaryBlue,
+                        color: context.accentColor,
                         size: 30,
                       ),
                       tooltip: 'Đặt ngay',
@@ -813,14 +820,14 @@ class _HomePageState extends State<HomePage> {
       margin: const EdgeInsets.symmetric(horizontal: 18),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
               Icon(Icons.workspace_premium, color: Colors.amber, size: 22),
               SizedBox(width: 8),
@@ -829,7 +836,7 @@ class _HomePageState extends State<HomePage> {
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 15,
-                  color: darkBlue,
+                  color: context.headingColor,
                 ),
               ),
             ],
@@ -841,7 +848,7 @@ class _HomePageState extends State<HomePage> {
               child: Row(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Icon(c.$3, size: 20, color: primaryBlue),
+                  Icon(c.$3, size: 20, color: context.accentColor),
                   const SizedBox(width: 10),
                   Expanded(
                     child: Column(
@@ -849,17 +856,17 @@ class _HomePageState extends State<HomePage> {
                       children: [
                         Text(
                           c.$1,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 13,
-                            color: darkBlue,
+                            color: context.headingColor,
                           ),
                         ),
                         Text(
                           c.$2,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 11,
-                            color: Colors.black54,
+                            color: context.mutedColor,
                           ),
                         ),
                       ],
@@ -879,7 +886,7 @@ class _HomePageState extends State<HomePage> {
       margin: const EdgeInsets.symmetric(horizontal: 18),
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: paleBlue,
+        color: context.accentSurface,
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: const Color(0xFFD6E8FB)),
       ),
@@ -887,18 +894,18 @@ class _HomePageState extends State<HomePage> {
         children: [
           Container(
             padding: const EdgeInsets.all(10),
-            decoration: const BoxDecoration(
-              color: Colors.white,
+            decoration: BoxDecoration(
+              color: context.cardSurface,
               shape: BoxShape.circle,
             ),
-            child: const Icon(
+            child: Icon(
               Icons.phone_in_talk,
-              color: primaryBlue,
+              color: context.accentColor,
               size: 22,
             ),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -906,22 +913,22 @@ class _HomePageState extends State<HomePage> {
                   'Tổng đài hỗ trợ 24/7',
                   style: TextStyle(
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                     fontSize: 14,
                   ),
                 ),
                 SizedBox(height: 2),
                 Text(
                   'Hotline: 1900 1234 (Miễn phí cuộc gọi)',
-                  style: TextStyle(fontSize: 12, color: Colors.black54),
+                  style: TextStyle(fontSize: 12, color: context.mutedColor),
                 ),
               ],
             ),
           ),
           OutlinedButton(
             style: OutlinedButton.styleFrom(
-              foregroundColor: primaryBlue,
-              side: const BorderSide(color: primaryBlue),
+              foregroundColor: context.accentColor,
+              side: BorderSide(color: context.accentColor),
               padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),

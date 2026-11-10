@@ -208,7 +208,7 @@ class _AccountPageState extends State<AccountPage> {
       context: context,
       builder: (dialogContext) => StatefulBuilder(
         builder: (context, setDialogState) => AlertDialog(
-          title: const Text('Đổi mật khẩu'),
+          title: Text(AppSettings.text(context, 'Đổi mật khẩu', 'Change password')),
           content: Form(
             key: formKey,
             child: SingleChildScrollView(
@@ -317,7 +317,7 @@ class _AccountPageState extends State<AccountPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Đăng xuất'),
+        title: Text(AppSettings.text(context, 'Đăng xuất', 'Sign out')),
         content: const Text('Bạn có chắc chắn muốn đăng xuất không?'),
         actions: [
           TextButton(
@@ -326,7 +326,7 @@ class _AccountPageState extends State<AccountPage> {
           ),
           FilledButton(
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Đăng xuất'),
+            child: Text(AppSettings.text(context, 'Đăng xuất', 'Sign out')),
           ),
         ],
       ),
@@ -361,8 +361,8 @@ class _AccountPageState extends State<AccountPage> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (bottomSheetContext) => Container(
-        decoration: const BoxDecoration(
-          color: Colors.white,
+        decoration: BoxDecoration(
+          color: context.cardSurface,
           borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
         ),
         padding: const EdgeInsets.fromLTRB(20, 16, 20, 28),
@@ -375,7 +375,7 @@ class _AccountPageState extends State<AccountPage> {
                 width: 44,
                 height: 4,
                 decoration: BoxDecoration(
-                  color: Colors.black12,
+                  color: context.cardOutline,
                   borderRadius: BorderRadius.circular(2),
                 ),
               ),
@@ -389,14 +389,14 @@ class _AccountPageState extends State<AccountPage> {
                     color: primaryBlue.withValues(alpha: 0.1),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  child: const Icon(
+                  child: Icon(
                     Icons.support_agent,
-                    color: primaryBlue,
+                    color: context.accentColor,
                     size: 28,
                   ),
                 ),
                 const SizedBox(width: 12),
-                const Column(
+                Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
@@ -404,12 +404,12 @@ class _AccountPageState extends State<AccountPage> {
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                     Text(
                       'WashCare luôn sẵn sàng lắng nghe bạn',
-                      style: TextStyle(fontSize: 13, color: Colors.black54),
+                      style: TextStyle(fontSize: 13, color: context.mutedColor),
                     ),
                   ],
                 ),
@@ -419,16 +419,16 @@ class _AccountPageState extends State<AccountPage> {
             Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F7FB),
+                color: context.insetSurface,
                 borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFE4ECF5)),
+                border: Border.all(color: context.cardOutline),
               ),
               child: Column(
                 children: [
-                  const Row(
+                  Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Icon(Icons.access_time_filled, color: primaryBlue, size: 20),
+                      Icon(Icons.access_time_filled, color: context.accentColor, size: 20),
                       SizedBox(width: 10),
                       Expanded(
                         child: Text(
@@ -436,7 +436,7 @@ class _AccountPageState extends State<AccountPage> {
                           style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w600,
-                            color: darkBlue,
+                            color: context.headingColor,
                           ),
                         ),
                       ),
@@ -447,13 +447,13 @@ class _AccountPageState extends State<AccountPage> {
                     children: [
                       const Icon(Icons.phone, color: Colors.green, size: 20),
                       const SizedBox(width: 10),
-                      const Expanded(
+                      Expanded(
                         child: Text(
                           'Hotline: 1900 1234',
                           style: TextStyle(
                             fontSize: 15,
                             fontWeight: FontWeight.bold,
-                            color: darkBlue,
+                            color: context.headingColor,
                           ),
                         ),
                       ),
@@ -478,13 +478,13 @@ class _AccountPageState extends State<AccountPage> {
                     ],
                   ),
                   const Divider(height: 20),
-                  const Row(
+                  Row(
                     children: [
-                      Icon(Icons.email_outlined, color: primaryBlue, size: 20),
+                      Icon(Icons.email_outlined, color: context.accentColor, size: 20),
                       SizedBox(width: 10),
                       Text(
                         'Email: hotro@washcare.vn',
-                        style: TextStyle(fontSize: 14, color: darkBlue),
+                        style: TextStyle(fontSize: 14, color: context.headingColor),
                       ),
                     ],
                   ),
@@ -492,12 +492,12 @@ class _AccountPageState extends State<AccountPage> {
               ),
             ),
             const SizedBox(height: 16),
-            const Text(
-              'Câu hỏi thường gặp',
+            Text(
+              AppSettings.text(context, 'Câu hỏi thường gặp', 'Frequently asked questions'),
               style: TextStyle(
                 fontSize: 15,
                 fontWeight: FontWeight.bold,
-                color: darkBlue,
+                color: context.headingColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -523,10 +523,10 @@ class _AccountPageState extends State<AccountPage> {
         dense: true,
         title: Text(
           question,
-          style: const TextStyle(
+          style: TextStyle(
             fontSize: 14,
             fontWeight: FontWeight.w600,
-            color: darkBlue,
+            color: context.headingColor,
           ),
         ),
         children: [
@@ -536,7 +536,7 @@ class _AccountPageState extends State<AccountPage> {
               alignment: Alignment.centerLeft,
               child: Text(
                 answer,
-                style: const TextStyle(fontSize: 13, color: Colors.black87),
+                style: TextStyle(fontSize: 13, color: context.detailColor),
               ),
             ),
           ),
@@ -558,11 +558,11 @@ class _AccountPageState extends State<AccountPage> {
                 color: primaryBlue.withValues(alpha: 0.1),
                 borderRadius: BorderRadius.circular(10),
               ),
-              child: const Icon(Icons.local_laundry_service, color: primaryBlue),
+              child: Icon(Icons.local_laundry_service, color: context.accentColor),
             ),
             const SizedBox(width: 12),
-            const Text(
-              'Về WashCare',
+            Text(
+              AppSettings.text(context, 'Về WashCare', 'About WashCare'),
               style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
             ),
           ],
@@ -571,25 +571,25 @@ class _AccountPageState extends State<AccountPage> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Text(
+            Text(
               'WashCare - Ứng dụng giặt ủi thông minh',
-              style: TextStyle(fontWeight: FontWeight.w600, color: darkBlue),
+              style: TextStyle(fontWeight: FontWeight.w600, color: context.headingColor),
             ),
             const SizedBox(height: 6),
-            const Text(
+            Text(
               'Phiên bản: 1.0.0\nNhóm thực hiện: Nhóm 7\nDự án: Lập trình Thiết bị Di động',
-              style: TextStyle(fontSize: 13, color: Colors.black87, height: 1.5),
+              style: TextStyle(fontSize: 13, color: context.detailColor, height: 1.5),
             ),
             const SizedBox(height: 12),
             Container(
               padding: const EdgeInsets.all(12),
               decoration: BoxDecoration(
-                color: const Color(0xFFF4F7FB),
+                color: context.insetSurface,
                 borderRadius: BorderRadius.circular(12),
               ),
-              child: const Text(
+              child: Text(
                 'Giải pháp tiện lợi, giao nhận tận nơi, bảo vệ và chăm sóc từng bộ trang phục của bạn.',
-                style: TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(fontSize: 12, color: context.mutedColor),
               ),
             ),
           ],
@@ -621,7 +621,7 @@ class _AccountPageState extends State<AccountPage> {
               color: primaryBlue.withValues(alpha: 0.09),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(icon, color: primaryBlue),
+            child: Icon(icon, color: context.accentColor),
           ),
           const SizedBox(width: 14),
           Expanded(
@@ -693,9 +693,7 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surface
-          : const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Text(
           AppSettings.text(context, 'Tài khoản', 'Account'),
@@ -876,7 +874,7 @@ class _AccountPageState extends State<AccountPage> {
                   ],
                   const SizedBox(height: 20),
                   Card(
-                    color: Colors.white,
+                    color: context.cardSurface,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
@@ -889,13 +887,13 @@ class _AccountPageState extends State<AccountPage> {
                         children: [
                           Row(
                             children: [
-                              const Expanded(
+                              Expanded(
                                 child: Text(
-                                  'Thông tin cá nhân',
+                                  AppSettings.text(context, 'Thông tin cá nhân', 'Personal information'),
                                   style: TextStyle(
                                     fontSize: 17,
                                     fontWeight: FontWeight.bold,
-                                    color: darkBlue,
+                                    color: context.headingColor,
                                   ),
                                 ),
                               ),
@@ -934,7 +932,7 @@ class _AccountPageState extends State<AccountPage> {
                   ),
                   const SizedBox(height: 20),
                   Card(
-                    color: Colors.white,
+                    color: context.cardSurface,
                     elevation: 0,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(18),
@@ -944,8 +942,8 @@ class _AccountPageState extends State<AccountPage> {
                       children: [
                         _actionTile(
                           icon: Icons.location_on_outlined,
-                          title: 'Sổ địa chỉ đã lưu',
-                          subtitle: 'Quản lý địa chỉ giao nhận đồ',
+                          title: AppSettings.text(context, 'Sổ địa chỉ đã lưu', 'Saved addresses'),
+                          subtitle: AppSettings.text(context, 'Quản lý địa chỉ giao nhận đồ', 'Manage pickup and delivery addresses'),
                           onTap: () {
                             Navigator.push(
                               context,
@@ -970,21 +968,21 @@ class _AccountPageState extends State<AccountPage> {
                         const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.support_agent_outlined,
-                          title: 'Trung tâm hỗ trợ',
+                          title: AppSettings.text(context, 'Trung tâm hỗ trợ', 'Support center'),
                           subtitle: 'Hotline 08:00 - 21:00 & Giải đáp thắc mắc',
                           onTap: _showSupportDialog,
                         ),
                         const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.info_outline,
-                          title: 'Về WashCare',
+                          title: AppSettings.text(context, 'Về WashCare', 'About WashCare'),
                           subtitle: 'Phiên bản 1.0.0 & Nhóm phát triển',
                           onTap: _showAboutDialog,
                         ),
                         const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.lock_outline,
-                          title: 'Đổi mật khẩu',
+                          title: AppSettings.text(context, 'Đổi mật khẩu', 'Change password'),
                           subtitle: 'Cập nhật mật khẩu đăng nhập',
                           loading: _changingPassword,
                           onTap: _changePassword,
@@ -992,7 +990,7 @@ class _AccountPageState extends State<AccountPage> {
                         const Divider(height: 1, indent: 74),
                         _actionTile(
                           icon: Icons.logout,
-                          title: 'Đăng xuất',
+                          title: AppSettings.text(context, 'Đăng xuất', 'Sign out'),
                           subtitle: 'Đăng xuất khỏi tài khoản WashCare',
                           danger: true,
                           onTap: _signOut,
@@ -1001,10 +999,10 @@ class _AccountPageState extends State<AccountPage> {
                     ),
                   ),
                   const SizedBox(height: 20),
-                  const Center(
+                  Center(
                     child: Text(
                       'WashCare • Chăm sóc quần áo của bạn',
-                      style: TextStyle(fontSize: 12, color: Colors.black45),
+                      style: TextStyle(fontSize: 12, color: context.mutedColor),
                     ),
                   ),
                   const SizedBox(height: 20),

@@ -200,7 +200,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                             fontWeight: isCurrent
                                 ? FontWeight.bold
                                 : FontWeight.normal,
-                            color: isCurrent ? opt.$3 : Colors.black87,
+                            color: isCurrent ? opt.$3 : context.detailColor,
                           ),
                         ),
                       ),
@@ -262,7 +262,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
             width: 120,
             child: Text(
               label,
-              style: const TextStyle(color: Colors.black54, fontSize: 13),
+              style: TextStyle(color: context.mutedColor, fontSize: 13),
             ),
           ),
           Expanded(
@@ -280,7 +280,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Text('Quản trị đơn #${_order.id}'),
         backgroundColor: darkBlue,
@@ -290,7 +290,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
         padding: const EdgeInsets.all(16),
         children: [
           Card(
-            color: Colors.white,
+            color: context.cardSurface,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -304,10 +304,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
-                      const Text(
+                      Text(
                         'TRẠNG THÁI HIỆN TẠI',
                         style: TextStyle(
-                          color: Colors.black54,
+                          color: context.mutedColor,
                           fontSize: 11,
                           fontWeight: FontWeight.bold,
                           letterSpacing: 0.8,
@@ -326,10 +326,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                     ],
                   ),
                   const Divider(height: 28),
-                  const Text(
+                  Text(
                     'THAO TÁC XỬ LÝ ĐƠN HÀNG',
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: context.mutedColor,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
@@ -354,7 +354,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                               icon: const Icon(Icons.check_circle_outline),
                               label: const Text('Tiếp nhận đơn'),
                               style: FilledButton.styleFrom(
-                                backgroundColor: primaryBlue,
+                                backgroundColor: primaryBlue, foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
                                   vertical: 12,
                                 ),
@@ -418,7 +418,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(12),
                         decoration: BoxDecoration(
-                          color: const Color(0xFFF1F5F9),
+                          color: context.insetSurface,
                           borderRadius: BorderRadius.circular(12),
                         ),
                         child: Text(
@@ -454,7 +454,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           ),
           const SizedBox(height: 16),
           Card(
-            color: Colors.white,
+            color: context.cardSurface,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -465,10 +465,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'THÔNG TIN KHÁCH HÀNG & GIAO NHẬN',
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: context.mutedColor,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
@@ -504,7 +504,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
           ),
           const SizedBox(height: 16),
           Card(
-            color: Colors.white,
+            color: context.cardSurface,
             elevation: 0,
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(18),
@@ -515,10 +515,10 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
+                  Text(
                     'DỊCH VỤ ĐÃ ĐẶT',
                     style: TextStyle(
-                      color: Colors.black54,
+                      color: context.mutedColor,
                       fontSize: 11,
                       fontWeight: FontWeight.bold,
                       letterSpacing: 0.8,
@@ -549,7 +549,7 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                             ),
                             Text(
                               '${item.formattedQuantity} ${item.serviceUnit}',
-                              style: const TextStyle(color: Colors.black54),
+                              style: TextStyle(color: context.mutedColor),
                             ),
                             if (item.subtotal > 0) ...[
                               const SizedBox(width: 12),

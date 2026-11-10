@@ -23,40 +23,41 @@ class OrderSummaryCard extends StatelessWidget {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Text(
+          Text(
             'Chi tiết thanh toán',
             style: TextStyle(
               fontWeight: FontWeight.bold,
               fontSize: 15,
-              color: darkBlue,
+              color: context.headingColor,
             ),
           ),
           const Divider(height: 20),
-          _summaryRow('Tiền dịch vụ', subtotal),
+          _summaryRow(context, 'Tiền dịch vụ', subtotal),
           _summaryRow(
+            context,
             'Phí vận chuyển',
             shippingFee ?? 'Miễn phí',
             highlight: shippingFee == null,
           ),
           if (discount != null)
-            _summaryRow('Giảm giá ($voucherCode)', discount!, highlight: true),
+            _summaryRow(context, 'Giảm giá ($voucherCode)', discount!, highlight: true),
           const Divider(height: 20),
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
-              const Text(
+              Text(
                 'Tổng thanh toán',
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
-                  color: darkBlue,
+                  color: context.headingColor,
                 ),
               ),
               Text(
@@ -74,7 +75,7 @@ class OrderSummaryCard extends StatelessWidget {
     );
   }
 
-  Widget _summaryRow(String title, String val, {bool highlight = false}) {
+  Widget _summaryRow(BuildContext context, String title, String val, {bool highlight = false}) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 4),
       child: Row(
@@ -82,13 +83,13 @@ class OrderSummaryCard extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(color: Colors.black54, fontSize: 13),
+            style: TextStyle(color: context.mutedColor, fontSize: 13),
           ),
           Text(
             val,
             style: TextStyle(
               fontWeight: FontWeight.w600,
-              color: highlight ? Colors.green : Colors.black87,
+              color: highlight ? Colors.green : context.detailColor,
               fontSize: 13,
             ),
           ),

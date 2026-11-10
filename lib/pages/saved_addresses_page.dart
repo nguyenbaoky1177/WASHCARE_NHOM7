@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import '../core/address_service.dart';
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../models/address_model.dart';
 
 class SavedAddressesPage extends StatefulWidget {
@@ -47,6 +48,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         TextEditingController(text: existing?.fullAddress);
     String selectedLabel = existing?.label ?? 'Nhà riêng';
     bool isDefault = existing?.isDefault ?? false;
+    bool saving = false;
 
     final saved = await showModalBottomSheet<bool>(
       context: context,
@@ -60,8 +62,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                 bottom: MediaQuery.of(context).viewInsets.bottom,
               ),
               child: Container(
-                decoration: const BoxDecoration(
-                  color: Colors.white,
+                decoration: BoxDecoration(
+                  color: context.cardSurface,
                   borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
                 ),
                 padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
@@ -77,7 +79,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             width: 40,
                             height: 4,
                             decoration: BoxDecoration(
-                              color: Colors.black12,
+                              color: context.cardOutline,
                               borderRadius: BorderRadius.circular(2),
                             ),
                           ),
@@ -87,10 +89,10 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           existing == null
                               ? 'Thêm địa chỉ mới'
                               : 'Chỉnh sửa địa chỉ',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
-                            color: darkBlue,
+                            color: context.headingColor,
                           ),
                         ),
                         const SizedBox(height: 16),
@@ -105,7 +107,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                 selected: isSelected,
                                 selectedColor: primaryBlue.withValues(alpha: 0.15),
                                 labelStyle: TextStyle(
-                                  color: isSelected ? primaryBlue : Colors.black87,
+                                  color: isSelected ? context.accentColor : context.detailColor,
                                   fontWeight: isSelected
                                       ? FontWeight.bold
                                       : FontWeight.normal,
@@ -174,13 +176,14 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           height: 48,
                           child: FilledButton(
                             style: FilledButton.styleFrom(
-                              backgroundColor: primaryBlue,
+                              backgroundColor: primaryBlue, foregroundColor: Colors.white,
                               shape: RoundedRectangleBorder(
                                 borderRadius: BorderRadius.circular(12),
                               ),
                             ),
-                            onPressed: () async {
+                            onPressed: saving ? null : () async {
                               if (formKey.currentState!.validate()) {
+                                setModalState(() => saving = true);
                                 final newAddress = AddressModel(
                                   id: existing?.id ??
                                       'addr_${DateTime.now().millisecondsSinceEpoch}',
@@ -190,9 +193,20 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                   fullAddress: addressController.text.trim(),
                                   isDefault: isDefault,
                                 );
-                                await AddressService.saveAddress(newAddress);
-                                if (context.mounted) {
-                                  Navigator.pop(context, true);
+                                try {
+                                  await AddressService.saveAddress(newAddress);
+                                  if (context.mounted) {
+                                    Navigator.pop(context, true);
+                                  }
+                                } catch (error) {
+                                  debugPrint('Save address failed: $error');
+                                  if (!context.mounted) return;
+                                  setModalState(() => saving = false);
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text('Không lưu được địa chỉ. Vui lòng thử lại.'),
+                                    ),
+                                  );
                                 }
                               }
                             },
@@ -222,7 +236,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     phoneController.dispose();
     addressController.dispose();
 
-    if (saved == true) {
+    if (saved == true && mounted) {
       _loadAddresses();
     }
   }
@@ -261,9 +275,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surface
-          : const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Text(
           widget.isSelectMode ? 'Chọn địa chỉ nhận đồ' : 'Sổ địa chỉ',
@@ -276,7 +288,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
         backgroundColor: primaryBlue,
         foregroundColor: Colors.white,
         icon: const Icon(Icons.add_location_alt_outlined),
-        label: const Text('Thêm địa chỉ mới'),
+        label: Text(AppSettings.text(context, 'Thêm địa chỉ mới', 'Add address')),
         onPressed: () => _openAddressForm(),
       ),
       body: FutureBuilder<List<AddressModel>>(
@@ -299,25 +311,25 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                       color: primaryBlue.withValues(alpha: 0.1),
                       shape: BoxShape.circle,
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.location_off_outlined,
                       size: 56,
-                      color: primaryBlue,
+                      color: context.accentColor,
                     ),
                   ),
                   const SizedBox(height: 16),
-                  const Text(
+                  Text(
                     'Chưa có địa chỉ nào được lưu',
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
-                      color: darkBlue,
+                      color: context.headingColor,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  const Text(
+                  Text(
                     'Lưu địa chỉ giúp bạn đặt dịch vụ nhanh chóng hơn',
-                    style: TextStyle(fontSize: 13, color: Colors.black54),
+                    style: TextStyle(fontSize: 13, color: context.mutedColor),
                   ),
                   const SizedBox(height: 20),
                   FilledButton.icon(
@@ -339,13 +351,13 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
               final item = addresses[index];
               return Card(
                 elevation: 1,
-                color: Colors.white,
+                color: context.cardSurface,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
                   side: BorderSide(
                     color: item.isDefault
                         ? primaryBlue
-                        : const Color(0xFFE5E7EB),
+                        : context.cardOutline,
                     width: item.isDefault ? 1.5 : 1,
                   ),
                 ),
@@ -371,17 +383,17 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                               ),
                               child: Icon(
                                 _getLabelIcon(item.label),
-                                color: primaryBlue,
+                                color: context.accentColor,
                                 size: 20,
                               ),
                             ),
                             const SizedBox(width: 10),
                             Text(
                               item.label,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
-                                color: darkBlue,
+                                color: context.headingColor,
                               ),
                             ),
                             const SizedBox(width: 8),
@@ -457,10 +469,10 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         const SizedBox(height: 12),
                         Text(
                           item.fullAddress,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 14,
                             fontWeight: FontWeight.w500,
-                            color: Colors.black87,
+                            color: context.detailColor,
                             height: 1.3,
                           ),
                         ),
@@ -469,31 +481,31 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                           const SizedBox(height: 8),
                           Row(
                             children: [
-                              const Icon(
+                              Icon(
                                 Icons.person_outline,
                                 size: 16,
-                                color: Colors.black54,
+                                color: context.mutedColor,
                               ),
                               const SizedBox(width: 6),
                               Text(
                                 item.recipientName.isNotEmpty
                                     ? item.recipientName
                                     : 'Không có tên',
-                                style: const TextStyle(
+                                style: TextStyle(
                                   fontSize: 13,
-                                  color: Colors.black54,
+                                  color: context.mutedColor,
                                 ),
                               ),
                               if (item.phoneNumber.isNotEmpty) ...[
-                                const Text(
+                                Text(
                                   ' • ',
-                                  style: TextStyle(color: Colors.black54),
+                                  style: TextStyle(color: context.mutedColor),
                                 ),
                                 Text(
                                   item.phoneNumber,
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 13,
-                                    color: Colors.black54,
+                                    color: context.mutedColor,
                                   ),
                                 ),
                               ],
@@ -509,7 +521,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                               icon: const Icon(Icons.check, size: 18),
                               label: const Text('Giao đến địa chỉ này'),
                               style: TextButton.styleFrom(
-                                foregroundColor: primaryBlue,
+                                foregroundColor: context.accentColor,
                               ),
                             ),
                           ),

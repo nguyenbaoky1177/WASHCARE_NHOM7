@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../core/notification_service.dart';
 import '../models/notification_model.dart';
 import 'active_orders_page.dart';
@@ -105,14 +107,17 @@ class _NotificationsPageState extends State<NotificationsPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
-        title: const Text(
-          'Thông báo',
+        title: Text(
+          AppSettings.text(context, 'Thông báo', 'Notifications'),
           style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
         ),
-        backgroundColor: Colors.white,
-        foregroundColor: darkBlue,
+        backgroundColor: context.cardSurface,
+        foregroundColor: context.headingColor,
+        systemOverlayStyle: context.isDarkTheme
+            ? SystemUiOverlayStyle.light
+            : SystemUiOverlayStyle.dark,
         elevation: 0.5,
         actions: [
           IconButton(
@@ -155,7 +160,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
             children: [
               // Filter Chips
               Container(
-                color: Colors.white,
+                color: context.cardSurface,
                 padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                 child: SingleChildScrollView(
                   scrollDirection: Axis.horizontal,
@@ -196,13 +201,13 @@ class _NotificationsPageState extends State<NotificationsPage> {
                               color: Colors.grey[400],
                             ),
                             const SizedBox(height: 16),
-                            const Center(
+                            Center(
                               child: Text(
                                 'Không có thông báo nào',
                                 style: TextStyle(
                                   fontWeight: FontWeight.bold,
                                   fontSize: 16,
-                                  color: darkBlue,
+                                  color: context.headingColor,
                                 ),
                               ),
                             ),
@@ -269,7 +274,7 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                                         ? FontWeight.w600
                                                         : FontWeight.bold,
                                                     fontSize: 14,
-                                                    color: darkBlue,
+                                                    color: context.headingColor,
                                                   ),
                                                 ),
                                               ),
@@ -289,8 +294,8 @@ class _NotificationsPageState extends State<NotificationsPage> {
                                             style: TextStyle(
                                               fontSize: 12.5,
                                               color: item.isRead
-                                                  ? Colors.black54
-                                                  : Colors.black87,
+                                                  ? context.mutedColor
+                                                  : context.detailColor,
                                               height: 1.3,
                                             ),
                                           ),
@@ -367,18 +372,18 @@ class _NotificationsPageState extends State<NotificationsPage> {
     return FilterChip(
       label: Text('$label ($count)'),
       selected: isSelected,
-      selectedColor: primaryBlue.withAlpha(30),
-      checkmarkColor: primaryBlue,
+      selectedColor: context.accentSurface,
+      checkmarkColor: context.accentColor,
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        color: isSelected ? primaryBlue : Colors.grey[800],
+        color: isSelected ? context.accentColor : context.detailColor,
       ),
-      backgroundColor: Colors.grey[100],
+      backgroundColor: context.insetSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(16),
         side: BorderSide(
-          color: isSelected ? primaryBlue : const Color(0xFFE4ECF5),
+          color: isSelected ? primaryBlue : context.cardOutline,
         ),
       ),
       onSelected: (_) {

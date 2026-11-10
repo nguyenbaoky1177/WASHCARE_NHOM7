@@ -169,7 +169,7 @@ class _AuthPageState extends State<AuthPage> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: paleBlue,
+                        color: context.accentSurface,
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: const Icon(
@@ -181,13 +181,13 @@ class _AuthPageState extends State<AuthPage> {
 
                     const SizedBox(height: 20),
 
-                    const Text(
+                    Text(
                       'WashCare',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 32,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
 
@@ -312,7 +312,7 @@ class _AuthPageState extends State<AuthPage> {
                       child: FilledButton(
                         onPressed: _isLoading ? null : _submit,
                         style: FilledButton.styleFrom(
-                          backgroundColor: primaryBlue,
+                          backgroundColor: primaryBlue, foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),

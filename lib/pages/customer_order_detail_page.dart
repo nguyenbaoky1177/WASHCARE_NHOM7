@@ -204,9 +204,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: Theme.of(context).brightness == Brightness.dark
-          ? Theme.of(context).colorScheme.surface
-          : const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Text(
           'Chi tiết đơn #${_order.id}',
@@ -267,7 +265,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   Widget _buildStatusHeaderCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: context.cardSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -295,10 +293,10 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                     children: [
                       Text(
                         'Đơn hàng #${_order.id}',
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
-                          color: darkBlue,
+                          color: context.headingColor,
                         ),
                       ),
                       OrderStatusBadge(order: _order),
@@ -307,9 +305,9 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   const SizedBox(height: 4),
                   Text(
                     'Đặt lúc: ${_order.formattedCreatedAt}',
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontSize: 12,
-                      color: Colors.black54,
+                      color: context.mutedColor,
                     ),
                   ),
                 ],
@@ -353,23 +351,23 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
 
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: context.cardSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.route_outlined, color: primaryBlue, size: 20),
+                Icon(Icons.route_outlined, color: context.accentColor, size: 20),
                 SizedBox(width: 8),
                 Text(
                   'Tiến trình xử lý',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
               ],
@@ -420,7 +418,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                                   : (i < currentStep
                                       ? FontWeight.w600
                                       : FontWeight.normal),
-                              color: i <= currentStep ? darkBlue : Colors.grey,
+                              color: i <= currentStep ? context.headingColor : context.mutedColor,
                             ),
                           ),
                           const SizedBox(height: 2),
@@ -430,7 +428,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                               fontSize: 12,
                               color: i == currentStep
                                   ? primaryBlue
-                                  : Colors.black45,
+                                  : context.mutedColor,
                             ),
                           ),
                         ],
@@ -449,23 +447,23 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   Widget _buildDeliveryInfoCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: context.cardSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.local_shipping_outlined, color: primaryBlue, size: 20),
+                Icon(Icons.local_shipping_outlined, color: context.accentColor, size: 20),
                 SizedBox(width: 8),
                 Text(
                   'Thông tin giao nhận đồ',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
               ],
@@ -512,7 +510,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Icon(icon, size: 18, color: highlight ? primaryBlue : Colors.black45),
+        Icon(icon, size: 18, color: highlight ? context.accentColor : context.mutedColor),
         const SizedBox(width: 10),
         Expanded(
           child: Column(
@@ -520,7 +518,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             children: [
               Text(
                 label,
-                style: const TextStyle(fontSize: 11, color: Colors.black54),
+                style: TextStyle(fontSize: 11, color: context.mutedColor),
               ),
               const SizedBox(height: 2),
               Text(
@@ -528,7 +526,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 style: TextStyle(
                   fontSize: 13,
                   fontWeight: highlight ? FontWeight.bold : FontWeight.w500,
-                  color: highlight ? primaryBlue : Colors.black87,
+                  color: highlight ? context.accentColor : context.detailColor,
                 ),
               ),
             ],
@@ -541,7 +539,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   Widget _buildItemsListCard() {
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: context.cardSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -551,23 +549,23 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
-                    Icon(Icons.dry_cleaning_outlined, color: primaryBlue, size: 20),
+                    Icon(Icons.dry_cleaning_outlined, color: context.accentColor, size: 20),
                     SizedBox(width: 8),
                     Text(
                       'Dịch vụ đã chọn',
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                   ],
                 ),
                 Text(
                   '${_order.items.length} món',
-                  style: const TextStyle(fontSize: 13, color: Colors.black54),
+                  style: TextStyle(fontSize: 13, color: context.mutedColor),
                 ),
               ],
             ),
@@ -592,13 +590,13 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                       Container(
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: paleBlue,
+                          color: context.accentSurface,
                           borderRadius: BorderRadius.circular(8),
                         ),
-                        child: const Icon(
+                        child: Icon(
                           Icons.local_laundry_service,
                           size: 18,
-                          color: primaryBlue,
+                          color: context.accentColor,
                         ),
                       ),
                       const SizedBox(width: 12),
@@ -608,17 +606,17 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                           children: [
                             Text(
                               item.serviceName,
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 14,
                                 fontWeight: FontWeight.bold,
-                                color: darkBlue,
+                                color: context.headingColor,
                               ),
                             ),
                             Text(
                               'Số lượng: ${item.formattedQuantity} ${item.serviceUnit}',
-                              style: const TextStyle(
+                              style: TextStyle(
                                 fontSize: 12,
-                                color: Colors.black54,
+                                color: context.mutedColor,
                               ),
                             ),
                           ],
@@ -626,10 +624,10 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                       ),
                       Text(
                         item.formattedSubtotal,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontSize: 14,
                           fontWeight: FontWeight.bold,
-                          color: darkBlue,
+                          color: context.headingColor,
                         ),
                       ),
                     ],
@@ -648,23 +646,23 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
 
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: context.cardSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Row(
+            Row(
               children: [
-                Icon(Icons.receipt_outlined, color: primaryBlue, size: 20),
+                Icon(Icons.receipt_outlined, color: context.accentColor, size: 20),
                 SizedBox(width: 8),
                 Text(
                   'Chi tiết thanh toán',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
               ],
@@ -673,8 +671,8 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Phương thức thanh toán',
-                    style: TextStyle(color: Colors.black54)),
+                Text('Phương thức thanh toán',
+                    style: TextStyle(color: context.mutedColor)),
                 Row(
                   children: [
                     Icon(
@@ -695,8 +693,8 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Trạng thái thanh toán',
-                    style: TextStyle(color: Colors.black54)),
+                Text('Trạng thái thanh toán',
+                    style: TextStyle(color: context.mutedColor)),
                 Container(
                   padding:
                       const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
@@ -727,12 +725,12 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
+                Text(
                   'Tổng cộng',
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
                 Text(
@@ -763,7 +761,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
 
     return Card(
       elevation: 1,
-      color: Colors.white,
+      color: context.cardSurface,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -773,7 +771,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Row(
+                Row(
                   children: [
                     Icon(Icons.star_rate_rounded, color: Colors.amber, size: 22),
                     SizedBox(width: 8),
@@ -782,7 +780,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                   ],
@@ -797,17 +795,17 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             ),
             const Divider(height: 20),
             if (_review == null) ...[
-              const Text(
+              Text(
                 'Bạn hài lòng với dịch vụ của WashCare chứ? Hãy để lại đánh giá nhé!',
-                style: TextStyle(fontSize: 13, color: Colors.black54),
+                style: TextStyle(fontSize: 13, color: context.mutedColor),
               ),
               const SizedBox(height: 12),
               SizedBox(
                 width: double.infinity,
                 child: OutlinedButton.icon(
                   style: OutlinedButton.styleFrom(
-                    foregroundColor: primaryBlue,
-                    side: const BorderSide(color: primaryBlue),
+                    foregroundColor: context.accentColor,
+                    side: BorderSide(color: context.accentColor),
                   ),
                   onPressed: _openReviewDialog,
                   icon: const Icon(Icons.rate_review_outlined),
@@ -828,7 +826,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 const SizedBox(height: 8),
                 Text(
                   _review!.comment,
-                  style: const TextStyle(fontSize: 13, color: Colors.black87),
+                  style: TextStyle(fontSize: 13, color: context.detailColor),
                 ),
               ],
             ],
@@ -842,7 +840,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: paleBlue,
+        color: context.accentSurface,
         borderRadius: BorderRadius.circular(16),
         border: Border.all(color: const Color(0xFFD0E1F4)),
       ),
@@ -851,13 +849,13 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
           Container(
             padding: const EdgeInsets.all(10),
             decoration: BoxDecoration(
-              color: Colors.white,
+              color: context.cardSurface,
               borderRadius: BorderRadius.circular(12),
             ),
-            child: const Icon(Icons.headset_mic_outlined, color: primaryBlue),
+            child: Icon(Icons.headset_mic_outlined, color: context.accentColor),
           ),
           const SizedBox(width: 12),
-          const Expanded(
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -866,12 +864,12 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
                 Text(
                   'Hotline 1900 1234 (08:00 - 21:00)',
-                  style: TextStyle(fontSize: 11, color: Colors.black54),
+                  style: TextStyle(fontSize: 11, color: context.mutedColor),
                 ),
               ],
             ),
@@ -898,7 +896,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
     if (!canCancel && !canPayMomo) return null;
 
     return Container(
-      color: Colors.white,
+      color: context.cardSurface,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       child: SafeArea(
         top: false,

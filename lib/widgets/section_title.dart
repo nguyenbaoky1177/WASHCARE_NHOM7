@@ -17,17 +17,17 @@ class SectionTitle extends StatelessWidget {
         children: [
           Text(
             title,
-            style: const TextStyle(
+            style: TextStyle(
               fontSize: 17,
               fontWeight: FontWeight.bold,
-              color: darkBlue,
+              color: context.headingColor,
             ),
           ),
           if (subtitle != null) ...[
             const SizedBox(height: 2),
             Text(
               subtitle!,
-              style: const TextStyle(fontSize: 12, color: Colors.black54),
+              style: TextStyle(fontSize: 12, color: context.mutedColor),
             ),
           ],
         ],

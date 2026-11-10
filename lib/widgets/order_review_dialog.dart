@@ -151,8 +151,8 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
         top: 16,
         bottom: 20 + bottomInset,
       ),
-      decoration: const BoxDecoration(
-        color: Colors.white,
+      decoration: BoxDecoration(
+        color: context.cardSurface,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       child: SingleChildScrollView(

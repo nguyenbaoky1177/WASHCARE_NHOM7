@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+
+import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../models/models.dart';
@@ -94,10 +97,10 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF5F8FC),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
-        title: const Text(
-          'Lịch sử đơn hàng',
+        title: Text(
+          AppSettings.text(context, 'Lịch sử đơn hàng', 'Order history'),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: const Color(0xFF1976D2),
@@ -177,7 +180,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                 return Card(
                   margin: const EdgeInsets.only(bottom: 16),
                   elevation: 2,
-                  color: Colors.white,
+                  color: context.cardSurface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(16),
                   ),
@@ -309,7 +312,7 @@ class _OrderHistoryPageState extends State<OrderHistoryPage> {
                           const SizedBox(height: 8),
                           Text(
                             'Thời gian nhận: ${_formatDate(order['pickup_time'])}',
-                            style: const TextStyle(color: Colors.black54),
+                            style: TextStyle(color: context.mutedColor),
                           ),
                           const Divider(height: 24),
                           const Row(

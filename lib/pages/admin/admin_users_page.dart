@@ -144,8 +144,8 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   if (user.phone != null && user.phone!.isNotEmpty)
                     Text(
                       'SĐT: ${user.phone}',
-                      style: const TextStyle(
-                        color: Colors.black54,
+                      style: TextStyle(
+                        color: context.mutedColor,
                         fontSize: 13,
                       ),
                     ),
@@ -202,7 +202,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13.5,
-                                      color: isSelected ? item.$5 : Colors.black87,
+                                      color: isSelected ? item.$5 : context.detailColor,
                                     ),
                                   ),
                                   Text(
@@ -295,7 +295,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: const Row(
           children: [
@@ -413,7 +413,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                           )
                         : null,
                     filled: true,
-                    fillColor: Colors.white,
+                    fillColor: context.cardSurface,
                     contentPadding: const EdgeInsets.symmetric(
                       horizontal: 16,
                       vertical: 12,
@@ -462,9 +462,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     padding: const EdgeInsets.all(32),
                     margin: const EdgeInsets.only(top: 20),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cardSurface,
                       borderRadius: BorderRadius.circular(16),
-                      border: Border.all(color: const Color(0xFFE4ECF5)),
+                      border: Border.all(color: context.cardOutline),
                     ),
                     child: Column(
                       children: [
@@ -499,7 +499,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
 
                     return Card(
                       margin: const EdgeInsets.only(bottom: 12),
-                      color: Colors.white,
+                      color: context.cardSurface,
                       elevation: 0.5,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -527,10 +527,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                     children: [
                                       Text(
                                         user.fullName.isNotEmpty ? user.fullName : 'Chưa đặt tên',
-                                        style: const TextStyle(
+                                        style: TextStyle(
                                           fontWeight: FontWeight.bold,
                                           fontSize: 15,
-                                          color: darkBlue,
+                                          color: context.headingColor,
                                         ),
                                       ),
                                       const SizedBox(height: 3),
@@ -644,9 +644,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 8),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(14),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Column(
         children: [
@@ -661,7 +661,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
           const SizedBox(height: 2),
           Text(
             label,
-            style: const TextStyle(fontSize: 11, color: Colors.black54),
+            style: TextStyle(fontSize: 11, color: context.mutedColor),
             textAlign: TextAlign.center,
             maxLines: 1,
             overflow: TextOverflow.ellipsis,
@@ -681,13 +681,13 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
       labelStyle: TextStyle(
         fontSize: 12,
         fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-        color: isSelected ? primaryBlue : Colors.grey[800],
+        color: isSelected ? context.accentColor : context.detailColor,
       ),
-      backgroundColor: Colors.white,
+      backgroundColor: context.cardSurface,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20),
         side: BorderSide(
-          color: isSelected ? primaryBlue : const Color(0xFFE4ECF5),
+          color: isSelected ? primaryBlue : context.cardOutline,
         ),
       ),
       onSelected: (_) {

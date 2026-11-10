@@ -8,6 +8,7 @@ import '../widgets/order/order_checkout_bar.dart';
 import '../widgets/order/order_summary_card.dart';
 import '../widgets/section_title.dart';
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../core/profile_cache.dart';
 import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
@@ -340,24 +341,24 @@ class _OrderPageState extends State<OrderPage> {
                 const SizedBox(height: 8),
                 Text(
                   'Tổng tiền: ${_formatMoney(chargedTotal)} đ',
-                  style: const TextStyle(
-                    color: primaryBlue,
+                  style: TextStyle(
+                    color: context.accentColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Bạn đã chọn MoMo Sandbox. Mở trang thanh toán để thực hiện giao dịch thử nghiệm.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                  style: TextStyle(color: context.mutedColor, fontSize: 13),
                 ),
                 const SizedBox(height: 16),
                 SizedBox(
                   width: double.infinity,
                   child: FilledButton.icon(
                     style: FilledButton.styleFrom(
-                      backgroundColor: primaryBlue,
+                      backgroundColor: primaryBlue, foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 12),
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
@@ -414,17 +415,17 @@ class _OrderPageState extends State<OrderPage> {
                 const SizedBox(height: 8),
                 Text(
                   'Tổng tiền: ${_formatMoney(chargedTotal)} đ',
-                  style: const TextStyle(
-                    color: primaryBlue,
+                  style: TextStyle(
+                    color: context.accentColor,
                     fontWeight: FontWeight.bold,
                     fontSize: 18,
                   ),
                 ),
                 const SizedBox(height: 12),
-                const Text(
+                Text(
                   'Bạn sẽ thanh toán tiền mặt khi shipper giao đồ sạch.',
                   textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.black54, fontSize: 13),
+                  style: TextStyle(color: context.mutedColor, fontSize: 13),
                 ),
               ],
             ),
@@ -459,7 +460,7 @@ class _OrderPageState extends State<OrderPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: const Text(
           'Đặt lịch giặt ủi',
@@ -568,10 +569,10 @@ class _OrderPageState extends State<OrderPage> {
         margin: const EdgeInsets.only(bottom: 10),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: isSelected ? primaryBlue : const Color(0xFFE4ECF5),
+            color: isSelected ? context.accentColor : context.cardOutline,
             width: isSelected ? 1.5 : 1.0,
           ),
           boxShadow: [
@@ -588,12 +589,12 @@ class _OrderPageState extends State<OrderPage> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: isSelected ? paleBlue : const Color(0xFFF1F5F9),
+                color: isSelected ? context.accentSurface : context.insetSurface,
                 borderRadius: BorderRadius.circular(14),
               ),
               child: Icon(
                 service.iconData,
-                color: isSelected ? primaryBlue : Colors.blueGrey,
+                color: isSelected ? context.accentColor : Colors.blueGrey,
                 size: 24,
               ),
             ),
@@ -604,17 +605,17 @@ class _OrderPageState extends State<OrderPage> {
                 children: [
                   Text(
                     service.name,
-                    style: const TextStyle(
+                    style: TextStyle(
                       fontWeight: FontWeight.bold,
                       fontSize: 15,
-                      color: darkBlue,
+                      color: context.headingColor,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     '${service.formattedPrice} đ / ${service.unit}',
-                    style: const TextStyle(
-                      color: primaryBlue,
+                    style: TextStyle(
+                      color: context.accentColor,
                       fontWeight: FontWeight.bold,
                       fontSize: 13,
                     ),
@@ -624,9 +625,9 @@ class _OrderPageState extends State<OrderPage> {
             ),
             Container(
               decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
+                color: context.insetSurface,
                 borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFE2E8F0)),
+                border: Border.all(color: context.cardOutline),
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -659,7 +660,7 @@ class _OrderPageState extends State<OrderPage> {
                     padding: const EdgeInsets.all(4),
                     constraints: const BoxConstraints(),
                     onPressed: () => setState(() => _quantities[service.id] = quantity + 1),
-                    icon: const Icon(Icons.add, color: primaryBlue),
+                    icon: Icon(Icons.add, color: context.accentColor),
                   ),
                 ],
               ),
@@ -711,10 +712,10 @@ class _OrderPageState extends State<OrderPage> {
       child: Container(
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: Colors.white,
+          color: context.cardSurface,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(
-            color: selected ? primaryBlue : const Color(0xFFE4ECF5),
+            color: selected ? context.accentColor : context.cardOutline,
             width: selected ? 1.5 : 1.0,
           ),
         ),
@@ -726,14 +727,14 @@ class _OrderPageState extends State<OrderPage> {
               children: [
                 Icon(
                   icon,
-                  color: selected ? primaryBlue : Colors.blueGrey,
+                  color: selected ? context.accentColor : Colors.blueGrey,
                   size: 22,
                 ),
                 Icon(
                   selected
                       ? Icons.radio_button_checked
                       : Icons.radio_button_off,
-                  color: selected ? primaryBlue : Colors.grey,
+                  color: selected ? context.accentColor : context.mutedColor,
                   size: 20,
                 ),
               ],
@@ -745,14 +746,14 @@ class _OrderPageState extends State<OrderPage> {
             const SizedBox(height: 2),
             Text(
               time,
-              style: const TextStyle(fontSize: 11, color: Colors.black54),
+              style: TextStyle(fontSize: 11, color: context.mutedColor),
             ),
             const SizedBox(height: 6),
             Text(
               fee,
               style: TextStyle(
                 fontWeight: FontWeight.bold,
-                color: selected ? primaryBlue : darkBlue,
+                color: selected ? context.accentColor : context.headingColor,
                 fontSize: 13,
               ),
             ),
@@ -766,9 +767,9 @@ class _OrderPageState extends State<OrderPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Column(
         children: [
@@ -777,12 +778,12 @@ class _OrderPageState extends State<OrderPage> {
               Container(
                 padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: paleBlue,
+                  color: context.accentSurface,
                   borderRadius: BorderRadius.circular(10),
                 ),
-                child: const Icon(
+                child: Icon(
                   Icons.calendar_month,
-                  color: primaryBlue,
+                  color: context.accentColor,
                   size: 20,
                 ),
               ),
@@ -791,19 +792,19 @@ class _OrderPageState extends State<OrderPage> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
+                    Text(
                       'Thời gian shipper đến nhận:',
-                      style: TextStyle(fontSize: 12, color: Colors.black54),
+                      style: TextStyle(fontSize: 12, color: context.mutedColor),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _pickupTime == null
                           ? 'Chưa chọn thời gian'
                           : '${_pickupTime!.day.toString().padLeft(2, '0')}/${_pickupTime!.month.toString().padLeft(2, '0')}/${_pickupTime!.year} lúc ${_pickupTime!.hour.toString().padLeft(2, '0')}:${_pickupTime!.minute.toString().padLeft(2, '0')}',
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 14,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                   ],
@@ -811,8 +812,8 @@ class _OrderPageState extends State<OrderPage> {
               ),
               OutlinedButton(
                 style: OutlinedButton.styleFrom(
-                  foregroundColor: primaryBlue,
-                  side: const BorderSide(color: primaryBlue),
+                  foregroundColor: context.accentColor,
+                  side: BorderSide(color: context.accentColor),
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(10),
                   ),
@@ -835,16 +836,16 @@ class _OrderPageState extends State<OrderPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Column(
         children: [
           TextFormField(
             controller: _nameController,
             decoration: InputDecoration(
-              labelText: 'Họ và tên người nhận *',
+              labelText: AppSettings.text(context, 'Họ và tên người nhận *', 'Recipient name *'),
               prefixIcon: Icon(Icons.person_outline),
             ),
             validator: (v) => v == null || v.trim().isEmpty ? 'Nhập họ tên' : null,
@@ -854,7 +855,7 @@ class _OrderPageState extends State<OrderPage> {
             controller: _phoneController,
             keyboardType: TextInputType.phone,
             decoration: InputDecoration(
-              labelText: 'Số điện thoại liên hệ *',
+              labelText: AppSettings.text(context, 'Số điện thoại liên hệ *', 'Phone number *'),
               prefixIcon: Icon(Icons.phone_outlined),
             ),
             validator: (v) {
@@ -870,13 +871,8 @@ class _OrderPageState extends State<OrderPage> {
           TextFormField(
             controller: _addressController,
             decoration: InputDecoration(
-              labelText: 'Địa chỉ nhận và giao đồ *',
-              prefixIcon: const Icon(Icons.location_on_outlined),
-              suffixIcon: IconButton(
-                icon: const Icon(Icons.bookmark_outline, color: primaryBlue),
-                tooltip: 'Chọn từ sổ địa chỉ',
-                onPressed: _selectFromAddressBook,
-              ),
+              labelText: AppSettings.text(context, 'Địa chỉ nhận và giao đồ *', 'Pickup and delivery address *'),
+              prefixIcon: Icon(Icons.location_on_outlined),
             ),
             validator: (v) => v == null || v.trim().isEmpty ? 'Nhập địa chỉ nhận đồ' : null,
           ),
@@ -884,16 +880,16 @@ class _OrderPageState extends State<OrderPage> {
           Align(
             alignment: Alignment.centerLeft,
             child: ActionChip(
-              avatar: const Icon(Icons.bookmark_rounded, size: 14, color: primaryBlue),
-              label: const Text(
-                'Chọn từ sổ địa chỉ',
+              avatar: Icon(Icons.bookmark_rounded, size: 14, color: context.accentColor),
+              label: Text(
+                AppSettings.text(context, 'Chọn từ sổ địa chỉ', 'Choose from address book'),
                 style: TextStyle(
                   fontSize: 11,
-                  color: primaryBlue,
+                  color: context.accentColor,
                   fontWeight: FontWeight.w600,
                 ),
               ),
-              backgroundColor: paleBlue,
+              backgroundColor: context.accentSurface,
               side: BorderSide.none,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(16),
@@ -906,16 +902,16 @@ class _OrderPageState extends State<OrderPage> {
             Align(
               alignment: Alignment.centerLeft,
               child: ActionChip(
-                avatar: const Icon(Icons.history, size: 14, color: primaryBlue),
+                avatar: Icon(Icons.history, size: 14, color: context.accentColor),
                 label: Text(
-                  'Địa chỉ gần nhất: ${_savedAddress.length > 30 ? '${_savedAddress.substring(0, 30)}...' : _savedAddress}',
-                  style: const TextStyle(
+                  'Địa chỉ mặc định: ${_savedAddress.length > 30 ? '${_savedAddress.substring(0, 30)}...' : _savedAddress}',
+                  style: TextStyle(
                     fontSize: 11,
-                    color: primaryBlue,
+                    color: context.accentColor,
                     fontWeight: FontWeight.w600,
                   ),
                 ),
-                backgroundColor: paleBlue,
+                backgroundColor: context.accentSurface,
                 side: BorderSide.none,
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(16),
@@ -933,7 +929,7 @@ class _OrderPageState extends State<OrderPage> {
             controller: _noteController,
             maxLines: 2,
             decoration: InputDecoration(
-              labelText: 'Ghi chú cho xưởng giặt (nếu có)',
+              labelText: AppSettings.text(context, 'Ghi chú cho xưởng giặt (nếu có)', 'Notes for the laundry (optional)'),
               hintText: 'Ví dụ: giặt riêng áo trắng, ủi li phẳng...',
               prefixIcon: Icon(Icons.edit_note),
             ),
@@ -947,9 +943,9 @@ class _OrderPageState extends State<OrderPage> {
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
       ),
       child: Row(
         children: [
@@ -961,7 +957,7 @@ class _OrderPageState extends State<OrderPage> {
                 hintText: 'Nhập mã: WASHCARE20',
                 prefixIcon: Icon(
                   Icons.confirmation_num_outlined,
-                  color: primaryBlue,
+                  color: context.accentColor,
                 ),
                 border: InputBorder.none,
                 filled: false,
@@ -973,7 +969,7 @@ class _OrderPageState extends State<OrderPage> {
             style: FilledButton.styleFrom(
               backgroundColor: _discountAmount > 0
                   ? Colors.green
-                  : darkBlue,
+                  : context.headingColor,
               shape: RoundedRectangleBorder(
                 borderRadius: BorderRadius.circular(10),
               ),
@@ -1009,10 +1005,10 @@ class _OrderPageState extends State<OrderPage> {
         return Container(
           margin: const EdgeInsets.only(bottom: 10),
           decoration: BoxDecoration(
-            color: Colors.white,
+            color: context.cardSurface,
             borderRadius: BorderRadius.circular(16),
             border: Border.all(
-              color: selected ? primaryBlue : const Color(0xFFE4ECF5),
+              color: selected ? context.accentColor : context.cardOutline,
               width: selected ? 1.5 : 1.0,
             ),
           ),
@@ -1026,12 +1022,12 @@ class _OrderPageState extends State<OrderPage> {
                   Container(
                     padding: const EdgeInsets.all(10),
                     decoration: BoxDecoration(
-                      color: selected ? paleBlue : const Color(0xFFF1F5F9),
+                      color: selected ? context.accentSurface : context.insetSurface,
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Icon(
                       opt.$4,
-                      color: selected ? primaryBlue : Colors.blueGrey,
+                      color: selected ? context.accentColor : Colors.blueGrey,
                       size: 22,
                     ),
                   ),
@@ -1045,15 +1041,15 @@ class _OrderPageState extends State<OrderPage> {
                           style: TextStyle(
                             fontWeight: FontWeight.bold,
                             fontSize: 14,
-                            color: selected ? darkBlue : Colors.black87,
+                            color: selected ? context.headingColor : context.detailColor,
                           ),
                         ),
                         const SizedBox(height: 2),
                         Text(
                           opt.$3,
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 12,
-                            color: Colors.black54,
+                            color: context.mutedColor,
                           ),
                         ),
                       ],
@@ -1061,7 +1057,7 @@ class _OrderPageState extends State<OrderPage> {
                   ),
                   Icon(
                     selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                    color: selected ? primaryBlue : Colors.grey,
+                    color: selected ? context.accentColor : context.mutedColor,
                     size: 20,
                   ),
                 ],

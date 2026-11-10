@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -49,6 +50,12 @@ class WashCareApp extends StatelessWidget {
             GlobalWidgetsLocalizations.delegate,
             GlobalCupertinoLocalizations.delegate,
           ],
+          builder: (context, child) => AnnotatedRegion<SystemUiOverlayStyle>(
+            value: context.isDarkTheme
+                ? SystemUiOverlayStyle.light
+                : SystemUiOverlayStyle.dark,
+            child: child!,
+          ),
 
           home: const AuthGate(),
         );
@@ -69,6 +76,7 @@ class WashCareApp extends StatelessWidget {
         backgroundColor: primaryBlue,
         foregroundColor: Colors.white,
         centerTitle: false,
+        systemOverlayStyle: SystemUiOverlayStyle.light,
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,

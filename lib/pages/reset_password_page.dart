@@ -98,7 +98,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       width: 100,
                       height: 100,
                       decoration: BoxDecoration(
-                        color: paleBlue,
+                        color: context.accentSurface,
                         borderRadius: BorderRadius.circular(28),
                       ),
                       child: const Icon(
@@ -108,13 +108,13 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                       ),
                     ),
                     const SizedBox(height: 24),
-                    const Text(
+                    Text(
                       'Tạo mật khẩu mới',
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         fontSize: 26,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -195,7 +195,7 @@ class _ResetPasswordPageState extends State<ResetPasswordPage> {
                         onPressed:
                         _isLoading ? null : _updatePassword,
                         style: FilledButton.styleFrom(
-                          backgroundColor: primaryBlue,
+                          backgroundColor: primaryBlue, foregroundColor: Colors.white,
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(14),
                           ),

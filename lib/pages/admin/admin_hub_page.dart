@@ -36,28 +36,28 @@ class _AdminHubPageState extends State<AdminHubPage> {
         onDestinationSelected: (index) {
           setState(() => _currentIndex = index);
         },
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDCEBFA),
+        backgroundColor: context.cardSurface,
+        indicatorColor: context.accentSurface,
         elevation: 8,
-        destinations: const [
+        destinations: [
           NavigationDestination(
             icon: Icon(Icons.analytics_outlined),
-            selectedIcon: Icon(Icons.analytics, color: darkBlue),
+            selectedIcon: Icon(Icons.analytics, color: context.headingColor),
             label: 'Tổng quan',
           ),
           NavigationDestination(
             icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long, color: darkBlue),
+            selectedIcon: Icon(Icons.receipt_long, color: context.headingColor),
             label: 'Đơn hàng',
           ),
           NavigationDestination(
             icon: Icon(Icons.category_outlined),
-            selectedIcon: Icon(Icons.category, color: darkBlue),
+            selectedIcon: Icon(Icons.category, color: context.headingColor),
             label: 'Dịch vụ & Giá',
           ),
           NavigationDestination(
             icon: Icon(Icons.people_outline_rounded),
-            selectedIcon: Icon(Icons.people_rounded, color: darkBlue),
+            selectedIcon: Icon(Icons.people_rounded, color: context.headingColor),
             label: 'Người dùng',
           ),
         ],
@@ -129,7 +129,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: const Row(
           children: [
@@ -265,12 +265,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 const SizedBox(height: 20),
 
                 // KPI Grid
-                const Text(
+                Text(
                   'Tình trạng vận hành',
                   style: TextStyle(
                     fontSize: 18,
                     fontWeight: FontWeight.bold,
-                    color: darkBlue,
+                    color: context.headingColor,
                   ),
                 ),
                 const SizedBox(height: 12),
@@ -331,9 +331,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 Container(
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
-                    color: Colors.white,
+                    color: context.cardSurface,
                     borderRadius: BorderRadius.circular(18),
-                    border: Border.all(color: const Color(0xFFE4ECF5)),
+                    border: Border.all(color: context.cardOutline),
                   ),
                   child: Row(
                     children: [
@@ -354,11 +354,11 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
                           children: [
-                            const Text(
+                            Text(
                               'Chỉ số hài lòng khách hàng (CSAT)',
                               style: TextStyle(
                                 fontSize: 12.5,
-                                color: Colors.black54,
+                                color: context.mutedColor,
                               ),
                             ),
                             const SizedBox(height: 2),
@@ -368,10 +368,10 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                                   _reviewCount == 0
                                       ? 'Chưa có đánh giá'
                                       : '${_csat.toStringAsFixed(1)} / 5.0',
-                                  style: const TextStyle(
+                                  style: TextStyle(
                                     fontSize: 20,
                                     fontWeight: FontWeight.bold,
-                                    color: darkBlue,
+                                    color: context.headingColor,
                                   ),
                                 ),
                                 const SizedBox(width: 8),
@@ -407,12 +407,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
+                    Text(
                       'Đơn hàng cần xử lý gấp',
                       style: TextStyle(
                         fontSize: 18,
                         fontWeight: FontWeight.bold,
-                        color: darkBlue,
+                        color: context.headingColor,
                       ),
                     ),
                     Container(
@@ -442,9 +442,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   Container(
                     padding: const EdgeInsets.all(24),
                     decoration: BoxDecoration(
-                      color: Colors.white,
+                      color: context.cardSurface,
                       borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: const Color(0xFFE4ECF5)),
+                      border: Border.all(color: context.cardOutline),
                     ),
                     child: const Column(
                       children: [
@@ -461,7 +461,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                   ...pendingOrders.take(3).map((o) {
                     return Card(
                       margin: const EdgeInsets.only(bottom: 10),
-                      color: Colors.white,
+                      color: context.cardSurface,
                       elevation: 0.5,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -513,9 +513,9 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
     return Container(
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: context.cardSurface,
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: const Color(0xFFE4ECF5)),
+        border: Border.all(color: context.cardOutline),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.02),
@@ -548,7 +548,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               ),
               Text(
                 title,
-                style: const TextStyle(fontSize: 12, color: Colors.black54),
+                style: TextStyle(fontSize: 12, color: context.mutedColor),
               ),
             ],
           ),

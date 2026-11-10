@@ -254,12 +254,12 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
             showCheckmark: false,
             label: Text('${filter.$2} ($count)'),
             selectedColor: darkBlue,
-            backgroundColor: Colors.white,
+            backgroundColor: context.cardSurface,
             side: BorderSide(
-              color: selected ? darkBlue : const Color(0xFFDDE5EF),
+              color: selected ? darkBlue : context.cardOutline,
             ),
             labelStyle: TextStyle(
-              color: selected ? Colors.white : const Color(0xFF44546A),
+              color: selected ? Colors.white : context.mutedColor,
               fontWeight: selected ? FontWeight.bold : FontWeight.normal,
               fontSize: 12,
             ),
@@ -275,7 +275,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   Widget _buildAdminOrderCard(OrderModel order) {
     return Card(
       margin: const EdgeInsets.only(bottom: 14),
-      color: Colors.white,
+      color: context.cardSurface,
       elevation: 0.5,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
@@ -320,17 +320,17 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                         children: [
                           Text(
                             'Đơn #${order.id}',
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.bold,
-                              color: darkBlue,
+                              color: context.headingColor,
                             ),
                           ),
                           Text(
                             order.formattedCreatedAt,
-                            style: const TextStyle(
+                            style: TextStyle(
                               fontSize: 11,
-                              color: Colors.black54,
+                              color: context.mutedColor,
                             ),
                           ),
                         ],
@@ -392,9 +392,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                   Expanded(
                     child: Text(
                       order.address,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 13,
-                        color: Colors.black87,
+                        color: context.detailColor,
                       ),
                     ),
                   ),
@@ -411,7 +411,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                   const SizedBox(width: 6),
                   Text(
                     'Lấy đồ: ${order.formattedPickupTime}',
-                    style: const TextStyle(fontSize: 12, color: Colors.black54),
+                    style: TextStyle(fontSize: 12, color: context.mutedColor),
                   ),
                 ],
               ),
@@ -421,7 +421,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                 children: [
                   Text(
                     '${order.items.length} món đồ',
-                    style: const TextStyle(color: Colors.black54, fontSize: 13),
+                    style: TextStyle(color: context.mutedColor, fontSize: 13),
                   ),
                   Text(
                     order.formattedTotalPrice,
@@ -440,7 +440,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                     Expanded(
                       child: FilledButton.icon(
                         style: FilledButton.styleFrom(
-                          backgroundColor: primaryBlue,
+                          backgroundColor: primaryBlue, foregroundColor: Colors.white,
                           padding: const EdgeInsets.symmetric(vertical: 8),
                         ),
                         onPressed: () => _quickUpdateStatus(
@@ -511,7 +511,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: const Row(
           children: [
@@ -558,9 +558,9 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                     Text(
                       '${snapshot.error}',
                       textAlign: TextAlign.center,
-                      style: const TextStyle(
+                      style: TextStyle(
                         fontSize: 12,
-                        color: Colors.black54,
+                        color: context.mutedColor,
                       ),
                     ),
                     const SizedBox(height: 12),
@@ -580,7 +580,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
           return Column(
             children: [
               Container(
-                color: Colors.white,
+                color: context.cardSurface,
                 padding: const EdgeInsets.fromLTRB(16, 12, 16, 10),
                 child: TextField(
                   controller: _searchController,
@@ -597,7 +597,7 @@ class _AdminOrdersPageState extends State<AdminOrdersPage> {
                           )
                         : null,
                     filled: true,
-                    fillColor: const Color(0xFFF1F5F9),
+                    fillColor: context.insetSurface,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
