@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_settings.dart';
 import 'account_page.dart';
 import 'active_orders_page.dart';
 import 'home_page.dart';
@@ -19,6 +20,8 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final dark = theme.brightness == Brightness.dark;
     return Scaffold(
       body: IndexedStack(
         index: _selectedIndex,
@@ -29,7 +32,9 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
           _loadedTabs.contains(1)
               ? ActiveOrdersPage(isVisible: _selectedIndex == 1)
               : const SizedBox.shrink(),
-          _loadedTabs.contains(2) ? const AccountPage() : const SizedBox.shrink(),
+          _loadedTabs.contains(2)
+              ? const AccountPage()
+              : const SizedBox.shrink(),
         ],
       ),
       bottomNavigationBar: NavigationBar(
@@ -40,24 +45,28 @@ class _MainNavigationPageState extends State<MainNavigationPage> {
             _loadedTabs.add(index);
           });
         },
-        backgroundColor: Colors.white,
-        indicatorColor: const Color(0xFFDCEBFA),
+        backgroundColor: dark
+            ? theme.colorScheme.surfaceContainer
+            : Colors.white,
+        indicatorColor: dark
+            ? theme.colorScheme.secondaryContainer
+            : const Color(0xFFDCEBFA),
         elevation: 8,
-        destinations: const [
+        destinations: [
           NavigationDestination(
-            icon: Icon(Icons.home_outlined),
-            selectedIcon: Icon(Icons.home),
-            label: 'Trang chủ',
+            icon: const Icon(Icons.home_outlined),
+            selectedIcon: const Icon(Icons.home),
+            label: AppSettings.text(context, 'Trang chủ', 'Home'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.receipt_long_outlined),
-            selectedIcon: Icon(Icons.receipt_long),
-            label: 'Đơn hàng',
+            icon: const Icon(Icons.receipt_long_outlined),
+            selectedIcon: const Icon(Icons.receipt_long),
+            label: AppSettings.text(context, 'Đơn hàng', 'Orders'),
           ),
           NavigationDestination(
-            icon: Icon(Icons.person_outline),
-            selectedIcon: Icon(Icons.person),
-            label: 'Tài khoản',
+            icon: const Icon(Icons.person_outline),
+            selectedIcon: const Icon(Icons.person),
+            label: AppSettings.text(context, 'Tài khoản', 'Account'),
           ),
         ],
       ),

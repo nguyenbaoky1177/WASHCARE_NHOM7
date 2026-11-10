@@ -10,7 +10,6 @@ import '../core/profile_cache.dart';
 import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
-import 'active_orders_page.dart';
 import 'customer_order_detail_page.dart';
 import 'notifications_page.dart';
 import 'order_page.dart';
@@ -183,7 +182,9 @@ class _HomePageState extends State<HomePage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: backgroundColor,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : backgroundColor,
       body: SafeArea(
         child: RefreshIndicator(
           onRefresh: _refresh,
@@ -224,7 +225,7 @@ class _HomePageState extends State<HomePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Column(
+                    Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
@@ -232,13 +233,13 @@ class _HomePageState extends State<HomePage> {
                           style: TextStyle(
                             fontSize: 20,
                             fontWeight: FontWeight.bold,
-                            color: darkBlue,
+                            color: Theme.of(context).colorScheme.onSurface,
                           ),
                         ),
-                        SizedBox(height: 2),
+                        const SizedBox(height: 2),
                         Text(
                           'Bảng giá niêm yết, chăm sóc tận tâm',
-                          style: TextStyle(fontSize: 12, color: Colors.black54),
+                          style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],
                     ),

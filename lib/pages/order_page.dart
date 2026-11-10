@@ -1,4 +1,5 @@
 import '../core/account_storage.dart';
+import '../core/address_service.dart';
 import '../core/request_timeout.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
@@ -85,9 +86,9 @@ class _OrderPageState extends State<OrderPage> {
         _nameController.text = profile.fullName;
         _phoneController.text = profile.phone ?? '';
       }
-      final saved = await _addressStorage?.readString('saved_address');
+      final saved = await AddressService.getDefaultAddress();
       if (!mounted) return;
-      _savedAddress = saved ?? '';
+      _savedAddress = saved?.fullAddress ?? '';
       if (_addressController.text.isEmpty) _addressController.text = _savedAddress;
       _services = results[1] as List<ServiceModel>;
       for (final service in _services) {

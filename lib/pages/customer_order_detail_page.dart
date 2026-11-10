@@ -5,7 +5,6 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
-import '../core/notification_service.dart';
 import '../core/request_timeout.dart';
 import '../core/review_service.dart';
 import '../core/supabase_client.dart';
@@ -70,15 +69,18 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   }
 
   Future<void> _reloadOrder() async {
+    final userId = supabase.auth.currentUser?.id;
+    if (userId == null) return;
     try {
       final res = await supabase
           .from('orders')
           .select('*, order_items(*, services(name, unit))')
           .eq('id', _order.id)
+          .eq('user_id', userId)
           .maybeSingle()
           .timeout(supabaseRequestTimeout);
 
-      if (res != null && mounted) {
+      if (res != null && mounted && supabase.auth.currentUser?.id == userId) {
         setState(() {
           _order = OrderModel.fromJson(res);
         });
@@ -144,22 +146,24 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
       final user = supabase.auth.currentUser;
       if (user == null) throw Exception('Bạn chưa đăng nhập.');
 
-      await supabase
+      final updated = await supabase
           .from('orders')
           .update({'status': 'cancelled'})
           .eq('id', _order.id)
           .eq('user_id', user.id)
-          .eq('status', 'pending');
-
-      await NotificationService.notifyOrderStatusChange(
-        _order.id,
-        'cancelled',
-      );
+          .eq('status', 'pending')
+          .select('id');
 
       if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Đã hủy đơn hàng thành công')),
+        SnackBar(
+          content: Text(
+            updated.isEmpty
+                ? 'Không thể hủy đơn. Trạng thái đơn có thể đã thay đổi.'
+                : 'Đã hủy đơn hàng thành công',
+          ),
+        ),
       );
 
       await _reloadOrder();
@@ -200,7 +204,9 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : const Color(0xFFF4F7FB),
       appBar: AppBar(
         title: Text(
           'Chi tiết đơn #${_order.id}',
@@ -578,7 +584,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 shrinkWrap: true,
                 physics: const NeverScrollableScrollPhysics(),
                 itemCount: _order.items.length,
-                separatorBuilder: (_, __) => const Divider(height: 16),
+                separatorBuilder: (_, _) => const Divider(height: 16),
                 itemBuilder: (context, index) {
                   final item = _order.items[index];
                   return Row(
@@ -818,11 +824,10 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   );
                 }),
               ),
-              if (_review!.comment != null &&
-                  _review!.comment!.trim().isNotEmpty) ...[
+              if (_review!.comment.trim().isNotEmpty) ...[
                 const SizedBox(height: 8),
                 Text(
-                  _review!.comment!,
+                  _review!.comment,
                   style: const TextStyle(fontSize: 13, color: Colors.black87),
                 ),
               ],

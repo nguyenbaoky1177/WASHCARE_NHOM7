@@ -730,7 +730,9 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: _background,
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : _background,
       appBar: AppBar(
         title: Row(
           children: [

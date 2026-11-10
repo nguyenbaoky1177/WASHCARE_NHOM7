@@ -1,5 +1,6 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:washcare/core/account_storage.dart';
 import 'package:washcare/core/address_service.dart';
 import 'package:washcare/models/models.dart';
 
@@ -39,7 +40,10 @@ void main() {
       final outJson = address.toJson();
       expect(outJson['id'], 'addr_1');
       expect(outJson['label'], 'Nhà riêng');
-      expect(outJson['full_address'], '123 Đường Số 1, Phường 2, Quận 3, TP.HCM');
+      expect(
+        outJson['full_address'],
+        '123 Đường Số 1, Phường 2, Quận 3, TP.HCM',
+      );
       expect(outJson['is_default'], true);
     });
 
@@ -66,9 +70,22 @@ void main() {
   });
 
   group('AddressService Tests', () {
-    test('getAddresses returns empty when no storage', () async {
+    test('getAddresses returns empty when no address has been saved', () async {
       final addresses = await AddressService.getAddresses();
       expect(addresses, isEmpty);
+    });
+
+    test('migrates the legacy address once and keeps it deleted', () async {
+      final storage = AccountStorage.current!;
+      await storage.writeString('saved_address', '  123 Đường A  ');
+
+      final address = (await AddressService.getAddresses()).single;
+      expect(address.fullAddress, '123 Đường A');
+      expect(address.isDefault, isTrue);
+      expect((await AddressService.getAddresses()).single.id, address.id);
+
+      await AddressService.deleteAddress(address.id);
+      expect(await AddressService.getAddresses(), isEmpty);
     });
 
     test('saveAddress, setDefault and deleteAddress', () async {

@@ -3,11 +3,13 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../core/profile_cache.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
 import 'admin/admin_hub_page.dart';
 import 'saved_addresses_page.dart';
+import '../widgets/settings/theme_language_bottom_sheet.dart';
 
 class AccountPage extends StatefulWidget {
   const AccountPage({super.key});
@@ -628,15 +630,15 @@ class _AccountPageState extends State<AccountPage> {
               children: [
                 Text(
                   title,
-                  style: const TextStyle(fontSize: 12, color: Colors.black54),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
                 const SizedBox(height: 4),
                 Text(
                   value.isEmpty ? 'Chưa cập nhật' : value,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 15,
                     fontWeight: FontWeight.w600,
-                    color: darkBlue,
+                    color: Theme.of(context).colorScheme.onSurface,
                   ),
                 ),
               ],
@@ -677,7 +679,9 @@ class _AccountPageState extends State<AccountPage> {
         title,
         style: TextStyle(
           fontWeight: FontWeight.w600,
-          color: danger ? Colors.redAccent : darkBlue,
+          color: danger
+              ? Colors.redAccent
+              : Theme.of(context).colorScheme.onSurface,
         ),
       ),
       subtitle: Text(subtitle),
@@ -689,11 +693,13 @@ class _AccountPageState extends State<AccountPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : const Color(0xFFF4F7FB),
       appBar: AppBar(
-        title: const Text(
-          'Tài khoản',
-          style: TextStyle(fontWeight: FontWeight.bold),
+        title: Text(
+          AppSettings.text(context, 'Tài khoản', 'Account'),
+          style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryBlue,
         foregroundColor: Colors.white,
@@ -948,6 +954,18 @@ class _AccountPageState extends State<AccountPage> {
                               ),
                             );
                           },
+                        ),
+                        const Divider(height: 1, indent: 74),
+                        _actionTile(
+                          icon: Icons.palette_outlined,
+                          title: AppSettings.text(
+                            context, 'Giao diện & Ngôn ngữ', 'Theme & language',
+                          ),
+                          subtitle: AppSettings.text(
+                            context, 'Chế độ Sáng/Tối và Tiếng Việt/English',
+                            'Light/Dark mode and Vietnamese/English',
+                          ),
+                          onTap: () => ThemeLanguageBottomSheet.show(context),
                         ),
                         const Divider(height: 1, indent: 74),
                         _actionTile(

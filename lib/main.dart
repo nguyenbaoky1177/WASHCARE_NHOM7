@@ -1,10 +1,11 @@
-
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import 'core/app_colors.dart';
+import 'core/app_settings.dart';
 import 'core/supabase_client.dart';
 import 'pages/auth_page.dart';
 import 'pages/main_navigation_page.dart';
@@ -19,6 +20,8 @@ Future<void> main() async {
     publishableKey: SupabaseConfig.supabasePublishableKey,
   );
 
+  await AppSettings.instance.load();
+
   runApp(const WashCareApp());
 }
 
@@ -27,33 +30,64 @@ class WashCareApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'WashCare',
-      debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        useMaterial3: true,
-        colorScheme: ColorScheme.fromSeed(seedColor: primaryBlue),
-        scaffoldBackgroundColor: backgroundColor,
-        appBarTheme: const AppBarTheme(
-          backgroundColor: primaryBlue,
-          foregroundColor: Colors.white,
-          centerTitle: false,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: Colors.white,
-          border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: Color(0xFFDCE6F2)),
+    final settings = AppSettings.instance;
+
+    return ListenableBuilder(
+      listenable: settings,
+      builder: (context, _) {
+        return MaterialApp(
+          title: 'WashCare',
+          debugShowCheckedModeBanner: false,
+
+          theme: _theme(Brightness.light),
+          darkTheme: _theme(Brightness.dark),
+          themeMode: settings.dark ? ThemeMode.dark : ThemeMode.light,
+          locale: settings.locale,
+          supportedLocales: const [Locale('vi'), Locale('en')],
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+
+          home: const AuthGate(),
+        );
+      },
+    );
+  }
+
+  ThemeData _theme(Brightness brightness) {
+    final colors = ColorScheme.fromSeed(
+      seedColor: primaryBlue,
+      brightness: brightness,
+    );
+    final dark = brightness == Brightness.dark;
+    return ThemeData(
+      colorScheme: colors,
+      scaffoldBackgroundColor: dark ? colors.surface : backgroundColor,
+      appBarTheme: const AppBarTheme(
+        backgroundColor: primaryBlue,
+        foregroundColor: Colors.white,
+        centerTitle: false,
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: dark ? colors.surfaceContainer : Colors.white,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: dark ? colors.outlineVariant : const Color(0xFFDCE6F2),
           ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(14),
-            borderSide: const BorderSide(color: primaryBlue, width: 1.5),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(14),
+          borderSide: BorderSide(
+            color: dark ? colors.primary : primaryBlue,
+            width: 1.5,
           ),
         ),
       ),
-      home: const AuthGate(),
     );
   }
 }
@@ -73,9 +107,9 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
 
-    _authSubscription =
-        supabase.auth.onAuthStateChange.listen((authState) {
-          if (!mounted) return;
+    _authSubscription = supabase.auth.onAuthStateChange.listen(
+      (authState) {
+        if (!mounted) return;
 
         if (authState.event == AuthChangeEvent.passwordRecovery) {
           setState(() {

@@ -163,7 +163,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             style: TextStyle(fontSize: 14),
                           ),
                           value: isDefault,
-                          activeColor: primaryBlue,
+                          activeThumbColor: primaryBlue,
                           onChanged: (val) {
                             setModalState(() => isDefault = val);
                           },
@@ -261,7 +261,9 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFFF4F7FB),
+      backgroundColor: Theme.of(context).brightness == Brightness.dark
+          ? Theme.of(context).colorScheme.surface
+          : const Color(0xFFF4F7FB),
       appBar: AppBar(
         title: Text(
           widget.isSelectMode ? 'Chọn địa chỉ nhận đồ' : 'Sổ địa chỉ',
@@ -332,7 +334,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
           return ListView.separated(
             padding: const EdgeInsets.fromLTRB(16, 16, 16, 80),
             itemCount: addresses.length,
-            separatorBuilder: (_, __) => const SizedBox(height: 12),
+            separatorBuilder: (_, _) => const SizedBox(height: 12),
             itemBuilder: (context, index) {
               final item = addresses[index];
               return Card(
