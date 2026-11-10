@@ -172,6 +172,9 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                     ),
                   ].map((item) {
                     final isSelected = selectedRole == item.$1;
+                    final roleAccent = context.isDarkTheme
+                        ? Color.lerp(item.$5, Colors.white, 0.45)!
+                        : item.$5;
                     return InkWell(
                       onTap: () => setDialogState(() => selectedRole = item.$1),
                       borderRadius: BorderRadius.circular(12),
@@ -182,16 +185,18 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                           vertical: 10,
                         ),
                         decoration: BoxDecoration(
-                          color: isSelected ? item.$5.withAlpha(20) : Colors.grey[50],
+                          color: isSelected
+                              ? roleAccent.withAlpha(20)
+                              : context.insetSurface,
                           borderRadius: BorderRadius.circular(12),
                           border: Border.all(
-                            color: isSelected ? item.$5 : Colors.grey[300]!,
+                            color: isSelected ? roleAccent : context.cardOutline,
                             width: isSelected ? 1.5 : 1.0,
                           ),
                         ),
                         child: Row(
                           children: [
-                            Icon(item.$4, color: item.$5, size: 22),
+                            Icon(item.$4, color: roleAccent, size: 22),
                             const SizedBox(width: 10),
                             Expanded(
                               child: Column(
@@ -202,14 +207,14 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
                                       fontSize: 13.5,
-                                      color: isSelected ? item.$5 : context.detailColor,
+                                      color: isSelected ? roleAccent : context.detailColor,
                                     ),
                                   ),
                                   Text(
                                     item.$3,
                                     style: TextStyle(
                                       fontSize: 11.5,
-                                      color: Colors.grey[600],
+                                      color: context.mutedColor,
                                     ),
                                   ),
                                 ],
@@ -217,7 +222,7 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                             ),
                             Icon(
                               isSelected ? Icons.check_circle_rounded : Icons.circle_outlined,
-                              color: isSelected ? item.$5 : Colors.grey[400],
+                              color: isSelected ? roleAccent : context.mutedColor,
                               size: 20,
                             ),
                           ],
@@ -233,7 +238,10 @@ class _AdminUsersPageState extends State<AdminUsersPage> {
                   child: const Text('Hủy'),
                 ),
                 FilledButton(
-                  style: FilledButton.styleFrom(backgroundColor: primaryBlue),
+                  style: FilledButton.styleFrom(
+                    backgroundColor: primaryBlue,
+                    foregroundColor: Colors.white,
+                  ),
                   onPressed: () => Navigator.pop(ctx, selectedRole),
                   child: const Text('Lưu thay đổi'),
                 ),

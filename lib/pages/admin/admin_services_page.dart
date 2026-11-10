@@ -340,7 +340,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
     return Scaffold(
       backgroundColor: context.pageSurface,
       appBar: AppBar(
-        title: const Text('Quản lý Dịch vụ & Giá cước'),
+        title: const Text('Dịch vụ và giá'),
         backgroundColor: darkBlue,
         foregroundColor: Colors.white,
         actions: [
@@ -412,12 +412,14 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                           width: 50,
                           height: 50,
                           decoration: BoxDecoration(
-                            color: s.isActive ? context.accentSurface : Colors.grey.shade100,
+                            color: s.isActive
+                                ? context.accentSurface
+                                : context.insetSurface,
                             borderRadius: BorderRadius.circular(14),
                           ),
                           child: Icon(
                             s.iconData,
-                            color: s.isActive ? primaryBlue : Colors.grey,
+                            color: s.isActive ? context.accentColor : context.mutedColor,
                             size: 26,
                           ),
                         ),
@@ -440,7 +442,6 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                                   ),
                                   Switch(
                                     value: s.isActive,
-                                    activeThumbColor: primaryBlue,
                                     onChanged: _actionLoading
                                         ? null
                                         : (val) => _toggleServiceStatus(s, val),
@@ -462,7 +463,9 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
                                     style: TextStyle(
                                       fontSize: 15,
                                       fontWeight: FontWeight.bold,
-                                      color: s.isActive ? primaryBlue : Colors.grey,
+                                      color: s.isActive
+                                          ? context.accentColor
+                                          : context.mutedColor,
                                     ),
                                   ),
                                   TextButton.icon(

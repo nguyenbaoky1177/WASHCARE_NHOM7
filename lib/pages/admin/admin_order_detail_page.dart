@@ -626,8 +626,8 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       ),
                       Text(
                         _order.formattedTotalPrice,
-                        style: const TextStyle(
-                          color: primaryBlue,
+                        style: TextStyle(
+                          color: context.accentColor,
                           fontWeight: FontWeight.bold,
                           fontSize: 20,
                         ),
