@@ -50,16 +50,17 @@ class ProfileModel {
     );
   }
 
-  String get roleDisplayName {
-    switch (role.toLowerCase()) {
-      case 'admin':
-        return 'Quản trị viên';
-      case 'staff':
-        return 'Nhân viên';
-      case 'customer':
-      default:
-        return 'Khách hàng';
-    }
+  String get roleDisplayName => roleLabel();
+
+  String roleLabel({bool english = false}) => switch (role.toLowerCase()) {
+    'admin' => english ? 'Administrator' : 'Quản trị viên',
+    'staff' => english ? 'Staff' : 'Nhân viên',
+    _ => english ? 'Customer' : 'Khách hàng',
+  };
+
+  String displayName({bool english = false}) {
+    final name = fullName.trim();
+    return name.isEmpty ? roleLabel(english: english) : name;
   }
 
   String get formattedCreatedAt {

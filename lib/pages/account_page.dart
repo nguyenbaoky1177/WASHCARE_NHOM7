@@ -692,6 +692,8 @@ class _AccountPageState extends State<AccountPage> {
 
   @override
   Widget build(BuildContext context) {
+    final english = Localizations.localeOf(context).languageCode == 'en';
+    final profile = _profile;
     return Scaffold(
       backgroundColor: context.pageSurface,
       appBar: AppBar(
@@ -742,9 +744,8 @@ class _AccountPageState extends State<AccountPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                _nameController.text.isEmpty
-                                    ? 'Khách hàng'
-                                    : _nameController.text,
+                                profile?.displayName(english: english) ??
+                                    AppSettings.text(context, 'Tài khoản', 'Account'),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -759,25 +760,28 @@ class _AccountPageState extends State<AccountPage> {
                                   fontSize: 13,
                                 ),
                               ),
-                              const SizedBox(height: 8),
-                              Container(
-                                padding: const EdgeInsets.symmetric(
-                                  horizontal: 10,
-                                  vertical: 5,
-                                ),
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withValues(alpha: 0.2),
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                                child: Text(
-                                  _profile?.roleDisplayName ?? 'Khách hàng',
-                                  style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 12,
-                                    fontWeight: FontWeight.w600,
+                              if (profile != null &&
+                                  profile.fullName.trim().isNotEmpty) ...[
+                                const SizedBox(height: 8),
+                                Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 10,
+                                    vertical: 5,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.white.withValues(alpha: 0.2),
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  child: Text(
+                                    profile.roleLabel(english: english),
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.w600,
+                                    ),
                                   ),
                                 ),
-                              ),
+                              ],
                             ],
                           ),
                         ),

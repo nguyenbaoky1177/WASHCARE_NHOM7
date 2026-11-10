@@ -27,6 +27,16 @@ void main() {
       const profile = ProfileModel(id: '1', fullName: 'Test', role: 'customer');
       expect(profile.roleDisplayName, 'Khách hàng');
     });
+
+    test('display name uses the role only when the full name is blank', () {
+      const profile = ProfileModel(id: '1', fullName: '  ', role: 'admin');
+      expect(profile.displayName(), 'Quản trị viên');
+      expect(profile.displayName(english: true), 'Administrator');
+      expect(profile.copyWith(role: 'staff').displayName(), 'Nhân viên');
+      expect(profile.copyWith(role: 'customer').displayName(), 'Khách hàng');
+      expect(profile.copyWith(fullName: '  Nguyễn Văn A ').displayName(),
+          'Nguyễn Văn A');
+    });
   });
 
   group('ServiceModel Tests', () {

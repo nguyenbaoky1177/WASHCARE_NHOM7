@@ -328,9 +328,9 @@ class _HomePageState extends State<HomePage> {
             child: FutureBuilder<ProfileModel?>(
               future: _profileFuture,
               builder: (context, snapshot) {
-                final name = snapshot.data?.fullName.isNotEmpty == true
-                    ? snapshot.data!.fullName
-                    : 'Khách hàng';
+                final name = snapshot.data?.displayName(
+                  english: Localizations.localeOf(context).languageCode == 'en',
+                ) ?? 'WashCare';
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
