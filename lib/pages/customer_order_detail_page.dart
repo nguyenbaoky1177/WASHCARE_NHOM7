@@ -631,7 +631,8 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   Widget _buildPaymentSummaryCard() {
     final isCod = _order.paymentMethod == 'cod';
     final isMomo = ['momo', 'momo_demo'].contains(_order.paymentMethod);
-    final isPaid = isMomo && _order.momoPaymentStatus == 'paid';
+    final isPaid = _order.isCodCollected ||
+        (isMomo && _order.momoPaymentStatus == 'paid');
     String text(String vi, String en) => AppSettings.text(context, vi, en);
 
     final method = switch (_order.paymentMethod) {

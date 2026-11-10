@@ -12,6 +12,10 @@ class OrderModel {
   final String? note;
   final String paymentMethod;
   final String momoPaymentStatus;
+  final bool supportsCodCollection;
+  final DateTime? codCollectedAt;
+  final String? codCollectedBy;
+  final double? codCollectedAmount;
   final DateTime? pickupTime;
   final String status;
   final double totalPrice;
@@ -27,6 +31,10 @@ class OrderModel {
     this.note,
     this.paymentMethod = 'cod',
     this.momoPaymentStatus = 'unpaid',
+    this.supportsCodCollection = false,
+    this.codCollectedAt,
+    this.codCollectedBy,
+    this.codCollectedAmount,
     this.pickupTime,
     required this.status,
     required this.totalPrice,
@@ -53,6 +61,14 @@ class OrderModel {
       note: json['note']?.toString(),
       paymentMethod: json['payment_method']?.toString() ?? 'cod',
       momoPaymentStatus: json['momo_payment_status']?.toString() ?? 'unpaid',
+      supportsCodCollection: json.containsKey('cod_collected_at'),
+      codCollectedAt: DateTime.tryParse(
+        json['cod_collected_at']?.toString() ?? '',
+      )?.toLocal(),
+      codCollectedBy: json['cod_collected_by']?.toString(),
+      codCollectedAmount: double.tryParse(
+        json['cod_collected_amount']?.toString() ?? '',
+      ),
       pickupTime: json['pickup_time'] != null
           ? DateTime.tryParse(json['pickup_time'].toString())?.toLocal()
           : null,
@@ -76,11 +92,24 @@ class OrderModel {
       'note': note,
       'payment_method': paymentMethod,
       'momo_payment_status': momoPaymentStatus,
+      if (supportsCodCollection)
+        'cod_collected_at': codCollectedAt?.toUtc().toIso8601String(),
+      if (codCollectedBy != null) 'cod_collected_by': codCollectedBy,
+      if (codCollectedAmount != null) 'cod_collected_amount': codCollectedAmount,
       'pickup_time': pickupTime?.toUtc().toIso8601String(),
       'status': status,
       'total_price': totalPrice,
     };
   }
+
+  bool get isCodCollected => paymentMethod == 'cod' && codCollectedAt != null;
+
+  bool get canConfirmCodCollection =>
+      supportsCodCollection &&
+      paymentMethod == 'cod' &&
+      isCompleted &&
+      totalPrice > 0 &&
+      !isCodCollected;
 
   String get statusDisplayName {
     switch (status) {
@@ -149,9 +178,16 @@ class OrderModel {
 
   String get formattedPickupTime => _formatDateTime(pickupTime);
 
-  String get formattedTotalPrice {
-    return '${totalPrice.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.')} đ';
-  }
+  String get formattedCodCollectedAt => _formatDateTime(codCollectedAt);
+
+  String get formattedTotalPrice => _formatPrice(totalPrice);
+
+  String get formattedCodCollectedAmount => codCollectedAmount == null
+      ? 'Chưa có thông tin'
+      : _formatPrice(codCollectedAmount!);
+
+  String _formatPrice(double amount) =>
+      '${amount.toStringAsFixed(0).replaceAllMapped(RegExp(r'\B(?=(\d{3})+(?!\d))'), (match) => '.')} đ';
 
   bool get canCancel => isPending &&
       (paymentMethod != 'momo' ||

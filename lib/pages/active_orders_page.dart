@@ -6,6 +6,7 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../widgets/order_status_badge.dart';
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../core/notification_service.dart';
 import '../core/review_service.dart';
 import '../core/supabase_client.dart';
@@ -26,6 +27,7 @@ class ActiveOrdersPage extends StatefulWidget {
 class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   late Future<List<OrderModel>> _ordersFuture;
   String _selectedFilter = 'all';
+  final _orderSearch = TextEditingController();
   final Set<String> _cancellingOrders = {};
   RealtimeChannel? _ordersChannel;
   Map<int, ReviewModel> _reviews = {};
@@ -52,6 +54,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
 
   @override
   void dispose() {
+    _orderSearch.dispose();
     if (_ordersChannel != null) {
       supabase.removeChannel(_ordersChannel!);
     }
@@ -818,7 +821,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
           }
 
           final orders = snapshot.data ?? [];
-          final filteredOrders = _filterOrders(orders);
+          final query = _orderSearch.text.trim();
+          final orderId = int.tryParse(query.replaceFirst(RegExp(r'^#\s*'), ''));
+          final matches = query.isEmpty
+              ? orders
+              : orders.where((order) => order.id == orderId).toList();
+          final filteredOrders = _filterOrders(matches);
 
           return Column(
             children: [
@@ -837,7 +845,30 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       ),
                     ),
                     const SizedBox(height: 14),
-                    _buildFilter(orders),
+                    Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      child: TextField(
+                        controller: _orderSearch,
+                        textInputAction: TextInputAction.search,
+                        onChanged: (_) => setState(() {}),
+                        decoration: InputDecoration(
+                          labelText: AppSettings.text(
+                            context, 'Tìm theo mã đơn', 'Find by order number',
+                          ),
+                          hintText: '#13',
+                          prefixIcon: const Icon(Icons.search),
+                          suffixIcon: query.isEmpty
+                              ? null
+                              : IconButton(
+                                  tooltip: AppSettings.text(context, 'Xóa tìm kiếm', 'Clear search'),
+                                  icon: const Icon(Icons.clear),
+                                  onPressed: () => setState(_orderSearch.clear),
+                                ),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    _buildFilter(matches),
                   ],
                 ),
               ),

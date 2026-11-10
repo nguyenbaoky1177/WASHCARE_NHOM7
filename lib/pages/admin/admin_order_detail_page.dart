@@ -22,6 +22,7 @@ class AdminOrderDetailPage extends StatefulWidget {
 class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   late OrderModel _order;
   bool _updating = false;
+  bool _confirmingCod = false;
   RealtimeChannel? _detailChannel;
 
   @override
@@ -92,6 +93,54 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
   void _showMessage(String msg) {
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
+  }
+
+  Future<void> _confirmCodCollection() async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Xác nhận đã thu tiền mặt?'),
+        content: Text(
+          'Chỉ xác nhận nếu đã nhận đủ ${_order.formattedTotalPrice} '
+          'cho đơn #${_order.id}.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext, false),
+            child: const Text('Quay lại'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, true),
+            child: const Text('Đã thu đủ tiền'),
+          ),
+        ],
+      ),
+    );
+    if (!mounted || confirmed != true || _confirmingCod ||
+        !_order.canConfirmCodCollection) {
+      return;
+    }
+
+    setState(() => _confirmingCod = true);
+    try {
+      await supabase.rpc(
+        'admin_confirm_cod_collection',
+        params: {'p_order_id': _order.id},
+      ).timeout(supabaseRequestTimeout);
+      _showMessage('Đã ghi nhận thu tiền COD.');
+      if (mounted) await _reloadOrder();
+    } on PostgrestException catch (error) {
+      _showMessage(
+        error.code == 'PGRST202'
+            ? 'Máy chủ chưa có chức năng xác nhận thu tiền COD.'
+            : 'Không ghi nhận được khoản thu. ${error.message}',
+      );
+    } catch (error) {
+      debugPrint('COD collection failed: $error');
+      _showMessage('Chưa xác minh được kết quả. Vui lòng thử lại.');
+    } finally {
+      if (mounted) setState(() => _confirmingCod = false);
+    }
   }
 
   Future<void> _updateStatus(String newStatus, String actionName) async {
@@ -585,6 +634,28 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                       ),
                     ],
                   ),
+                  if (_order.isCodCollected) ...[
+                    const SizedBox(height: 12),
+                    Text('Đã thu COD: ${_order.formattedCodCollectedAmount}'),
+                    Text('Thời điểm ghi nhận: ${_order.formattedCodCollectedAt}'),
+                    if (_order.codCollectedBy != null)
+                      Text('Mã admin ghi nhận: ${_order.codCollectedBy}'),
+                  ] else if (_order.canConfirmCodCollection) ...[
+                    const SizedBox(height: 12),
+                    FilledButton.icon(
+                      onPressed: _confirmingCod ? null : _confirmCodCollection,
+                      icon: const Icon(Icons.payments_outlined),
+                      label: Text(_confirmingCod ? 'Đang ghi nhận…' : 'Xác nhận đã thu tiền COD'),
+                    ),
+                  ] else if (_order.paymentMethod == 'cod' &&
+                      _order.isCompleted &&
+                      !_order.supportsCodCollection) ...[
+                    const SizedBox(height: 12),
+                    Text(
+                      'Máy chủ chưa bật chức năng xác nhận thu tiền COD.',
+                      style: TextStyle(color: context.mutedColor),
+                    ),
+                  ],
                   if (['momo', 'momo_demo'].contains(_order.paymentMethod) &&
                       !_order.isCancelled) ...[
                     const SizedBox(height: 16),

@@ -193,8 +193,12 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
               .toList();
 
           double totalRevenue = 0;
+          double collectedCod = 0;
           for (final o in completedOrders) {
             totalRevenue += o.totalPrice;
+            if (o.isCodCollected) {
+              collectedCod += o.codCollectedAmount ?? 0;
+            }
           }
 
           return RefreshIndicator(
@@ -232,7 +236,7 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           ),
                           SizedBox(width: 8),
                           Text(
-                            'TỔNG DOANH THU ĐƠN HOÀN TẤT',
+                            'GIÁ TRỊ ĐƠN ĐÃ HOÀN TẤT',
                             style: TextStyle(
                               color: Colors.white70,
                               fontWeight: FontWeight.bold,
@@ -259,6 +263,16 @@ class _AdminDashboardViewState extends State<AdminDashboardView> {
                           fontSize: 13,
                         ),
                       ),
+                      if (orders.any((order) => order.supportsCodCollection)) ...[
+                        const SizedBox(height: 8),
+                        Text(
+                          'COD đã xác nhận thu: ${_formatMoney(collectedCod)} đ',
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontWeight: FontWeight.w600,
+                          ),
+                        ),
+                      ],
                     ],
                   ),
                 ),
