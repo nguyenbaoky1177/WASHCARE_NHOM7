@@ -34,7 +34,6 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   int _eventRevision = 0;
 
   static const Color _primary = primaryBlue;
-  static const Color _background = Color(0xFFF4F7FB);
 
   @override
   void initState() {
@@ -399,7 +398,13 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   }
 
   Widget _buildOrderCard(OrderModel order) {
-    final color = order.statusColor;
+    final statusColor = order.statusColor;
+    final color = context.isDarkTheme
+        ? Color.lerp(statusColor, Colors.white, 0.45)!
+        : statusColor;
+    final reviewColor = context.isDarkTheme
+        ? Colors.amber.shade200
+        : const Color(0xFF8A5A00);
     final orderId = order.id.toString();
     final cancelling = _cancellingOrders.contains(orderId);
 
@@ -410,7 +415,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       shadowColor: Colors.black.withValues(alpha: 0.05),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(18),
-        side: const BorderSide(color: Color(0xFFE7EDF5)),
+        side: BorderSide(color: context.cardOutline),
       ),
       clipBehavior: Clip.antiAlias,
       child: InkWell(
@@ -427,12 +432,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                     width: 44,
                     height: 44,
                     decoration: BoxDecoration(
-                      color: _primary.withValues(alpha: 0.10),
+                      color: context.accentSurface,
                       borderRadius: BorderRadius.circular(12),
                     ),
-                    child: const Icon(
+                    child: Icon(
                       Icons.local_laundry_service_outlined,
-                      color: _primary,
+                      color: context.accentColor,
                     ),
                   ),
                   const SizedBox(width: 12),
@@ -442,10 +447,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       children: [
                         Text(
                           'Đơn hàng #${order.id}',
-                          style: const TextStyle(
+                          style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
-                            color: Color(0xFF24364B),
+                            color: context.headingColor,
                           ),
                         ),
                         const SizedBox(height: 5),
@@ -525,10 +530,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                     padding: const EdgeInsets.only(bottom: 8),
                     child: Row(
                       children: [
-                        const Icon(
+                        Icon(
                           Icons.checkroom_outlined,
                           size: 17,
-                          color: _primary,
+                          color: context.accentColor,
                         ),
                         const SizedBox(width: 8),
                         Expanded(child: Text(item.serviceName)),
@@ -552,8 +557,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                     child: Text(
                       order.formattedTotalPrice,
                       textAlign: TextAlign.end,
-                      style: const TextStyle(
-                        color: _primary,
+                      style: TextStyle(
+                        color: context.accentColor,
                         fontWeight: FontWeight.bold,
                         fontSize: 19,
                       ),
@@ -567,12 +572,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 'Thời gian nhận: ${order.formattedPickupTime}',
               ),
               const SizedBox(height: 12),
-              const Align(
+              Align(
                 alignment: Alignment.centerRight,
                 child: Text(
                   'Nhấn để xem chi tiết  ›',
                   style: TextStyle(
-                    color: _primary,
+                    color: context.accentColor,
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
                   ),
@@ -610,10 +615,10 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                                 children: [
                                   Text(
                                     'Đã đánh giá: ${review.rating}★ (${review.ratingLabel})',
-                                    style: const TextStyle(
+                                    style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
-                                      color: Color(0xFF8A5A00),
+                                      color: reviewColor,
                                     ),
                                   ),
                                   if (review.comment.isNotEmpty)
@@ -623,7 +628,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                                       overflow: TextOverflow.ellipsis,
                                       style: TextStyle(
                                         fontSize: 11.5,
-                                        color: Colors.grey[700],
+                                        color: context.mutedColor,
                                       ),
                                     ),
                                 ],
@@ -632,7 +637,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                             TextButton(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
-                                foregroundColor: Colors.amber[900],
+                                foregroundColor: reviewColor,
                               ),
                               onPressed: () => _openReviewDialog(order),
                               child: const Text('Sửa'),
@@ -648,8 +653,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                         icon: const Icon(Icons.star_outline_rounded, size: 18),
                         label: const Text('Đánh giá chất lượng dịch vụ'),
                         style: FilledButton.styleFrom(
-                          backgroundColor: Colors.amber[700],
-                          foregroundColor: Colors.white,
+                          backgroundColor: Colors.amber.shade700,
+                          foregroundColor: Colors.black,
                           padding: const EdgeInsets.symmetric(vertical: 12),
                           shape: RoundedRectangleBorder(
                             borderRadius: BorderRadius.circular(12),
@@ -820,7 +825,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               Container(
                 width: double.infinity,
                 padding: const EdgeInsets.only(top: 16, bottom: 14),
-                color: _background,
+                color: context.pageSurface,
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
