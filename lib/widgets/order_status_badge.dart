@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_colors.dart';
 import '../models/order_model.dart';
 
 class OrderStatusBadge extends StatelessWidget {
@@ -22,9 +23,13 @@ class OrderStatusBadge extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final color = order.statusColor;
+    final color = context.isDarkTheme
+        ? Color.lerp(order.statusColor, Colors.white, 0.45)!
+        : order.statusColor;
     final label = Text(
-      order.statusDisplayName,
+      order.statusLabel(
+        english: Localizations.localeOf(context).languageCode == 'en',
+      ),
       style: TextStyle(
         color: color,
         fontWeight: FontWeight.bold,

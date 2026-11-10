@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/app_colors.dart';
 import '../models/order_model.dart';
 import 'momo_payment_dialog.dart';
 
@@ -19,7 +20,7 @@ class MomoPaymentCard extends StatelessWidget {
   Widget build(BuildContext context) {
     final legacyDemo = order.paymentMethod == 'momo_demo';
     return Card(
-      color: const Color(0xFFFFF0F7),
+      color: context.isDarkTheme ? context.cardSurface : const Color(0xFFFFF0F7),
       margin: EdgeInsets.zero,
       child: Padding(
         padding: const EdgeInsets.all(16),
@@ -28,8 +29,8 @@ class MomoPaymentCard extends StatelessWidget {
           children: [
             Text(
               legacyDemo ? 'MoMo mô phỏng (đơn cũ)' : 'MoMo Sandbox',
-              style: const TextStyle(
-                color: Color(0xFFA50064),
+              style: TextStyle(
+                color: context.isDarkTheme ? context.headingColor : const Color(0xFFA50064),
                 fontSize: 16,
                 fontWeight: FontWeight.bold,
               ),

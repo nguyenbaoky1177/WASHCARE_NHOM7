@@ -103,16 +103,16 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                   statusName = 'Đã xác nhận';
                   break;
                 case 'washing':
-                  statusName = 'Đang xử lý';
+                  statusName = AppSettings.text(context, 'Đang xử lý', 'In progress');
                   break;
                 case 'delivering':
                   statusName = 'Đang giao hàng';
                   break;
                 case 'completed':
-                  statusName = 'Hoàn thành';
+                  statusName = AppSettings.text(context, 'Hoàn thành', 'Completed');
                   break;
                 case 'cancelled':
-                  statusName = 'Đã hủy';
+                  statusName = AppSettings.text(context, 'Đã hủy', 'Cancelled');
                   break;
               }
 
@@ -271,7 +271,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) => AlertDialog(
-        title: const Text('Xác nhận hủy đơn'),
+        title: Text(AppSettings.text(context, 'Xác nhận hủy đơn', 'Cancel this order?')),
         content: Text(
           'Bạn có chắc muốn hủy đơn hàng #${order.id} không? '
           'Thao tác này sẽ cập nhật trạng thái đơn.',
@@ -279,12 +279,12 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(dialogContext, false),
-            child: const Text('Không'),
+            child: Text(AppSettings.text(context, 'Không', 'Keep order')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(dialogContext, true),
-            child: const Text('Xác nhận hủy'),
+            child: Text(AppSettings.text(context, 'Xác nhận hủy', 'Cancel order')),
           ),
         ],
       ),
@@ -344,11 +344,11 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
   }
 
   Widget _buildFilter(List<OrderModel> orders) {
-    const filters = [
-      ('all', 'Tất cả'),
-      ('active', 'Đang xử lý'),
-      ('completed', 'Hoàn thành'),
-      ('cancelled', 'Đã hủy'),
+    final filters = [
+      ('all', AppSettings.text(context, 'Tất cả', 'All')),
+      ('active', AppSettings.text(context, 'Đang xử lý', 'In progress')),
+      ('completed', AppSettings.text(context, 'Hoàn thành', 'Completed')),
+      ('cancelled', AppSettings.text(context, 'Đã hủy', 'Cancelled')),
     ];
 
     return SizedBox(
@@ -449,7 +449,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Đơn hàng #${order.id}',
+                          AppSettings.text(context, 'Đơn hàng #${order.id}', 'Order #${order.id}'),
                           style: TextStyle(
                             fontSize: 16,
                             fontWeight: FontWeight.bold,
@@ -485,7 +485,9 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              order.statusDisplayName,
+                              order.statusLabel(
+                                english: Localizations.localeOf(context).languageCode == 'en',
+                              ),
                               style: TextStyle(
                                 color: color,
                                 fontSize: 11,
@@ -504,16 +506,16 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                 Icons.person_outline,
                 order.customerName.isNotEmpty
                     ? order.customerName
-                    : 'Chưa có tên người nhận',
+                    : AppSettings.text(context, 'Chưa có tên người nhận', 'No recipient name'),
               ),
               const SizedBox(height: 10),
               _infoRow(
                 Icons.location_on_outlined,
-                order.address.isNotEmpty ? order.address : 'Chưa có địa chỉ',
+                order.address.isNotEmpty ? order.address : AppSettings.text(context, 'Chưa có địa chỉ', 'No address'),
               ),
               const SizedBox(height: 16),
               Text(
-                'DỊCH VỤ',
+                AppSettings.text(context, 'DỊCH VỤ', 'SERVICES'),
                 style: TextStyle(
                   color: context.mutedColor,
                   fontSize: 11,
@@ -524,7 +526,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               const SizedBox(height: 10),
               if (order.items.isEmpty)
                 Text(
-                  'Chưa có thông tin dịch vụ.',
+                  AppSettings.text(context, 'Chưa có thông tin dịch vụ.', 'No service details.'),
                   style: TextStyle(color: context.mutedColor),
                 )
               else
@@ -552,8 +554,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
-                  const Text(
-                    'Tổng thanh toán',
+                  Text(
+                    AppSettings.text(context, 'Tổng thanh toán', 'Order total'),
                     style: TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
                   ),
                   Flexible(
@@ -572,13 +574,13 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
               const SizedBox(height: 10),
               _infoRow(
                 Icons.access_time,
-                'Thời gian nhận: ${order.formattedPickupTime}',
+                AppSettings.text(context, 'Thời gian nhận: ${order.formattedPickupTime}', 'Pickup: ${order.formattedPickupTime}'),
               ),
               const SizedBox(height: 12),
               Align(
                 alignment: Alignment.centerRight,
                 child: Text(
-                  'Nhấn để xem chi tiết  ›',
+                  AppSettings.text(context, 'Nhấn để xem chi tiết  ›', 'View details  ›'),
                   style: TextStyle(
                     color: context.accentColor,
                     fontSize: 12,
@@ -617,7 +619,11 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
                                   Text(
-                                    'Đã đánh giá: ${review.rating}★ (${review.ratingLabel})',
+                                    AppSettings.text(
+                                      context,
+                                      'Đã đánh giá: ${review.rating}★ (${review.ratingLabel})',
+                                      'Rated: ${review.rating}★',
+                                    ),
                                     style: TextStyle(
                                       fontSize: 13,
                                       fontWeight: FontWeight.bold,
@@ -643,7 +649,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                                 foregroundColor: reviewColor,
                               ),
                               onPressed: () => _openReviewDialog(order),
-                              child: const Text('Sửa'),
+                              child: Text(AppSettings.text(context, 'Sửa', 'Edit')),
                             ),
                           ],
                         ),
@@ -654,7 +660,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       child: FilledButton.icon(
                         onPressed: () => _openReviewDialog(order),
                         icon: const Icon(Icons.star_outline_rounded, size: 18),
-                        label: const Text('Đánh giá chất lượng dịch vụ'),
+                        label: Text(AppSettings.text(context, 'Đánh giá chất lượng dịch vụ', 'Rate this service')),
                         style: FilledButton.styleFrom(
                           backgroundColor: Colors.amber.shade700,
                           foregroundColor: Colors.black,
@@ -681,7 +687,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                             child: CircularProgressIndicator(strokeWidth: 2),
                           )
                         : const Icon(Icons.cancel_outlined),
-                    label: Text(cancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
+                    label: Text(cancelling ? AppSettings.text(context, 'Đang hủy...', 'Cancelling…') : AppSettings.text(context, 'Hủy đơn hàng', 'Cancel order')),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: Colors.red,
                       side: const BorderSide(color: Colors.redAccent),
@@ -718,16 +724,16 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
           color: Colors.blueGrey.shade200,
         ),
         const SizedBox(height: 18),
-        const Center(
+        Center(
           child: Text(
-            'Chưa có đơn hàng phù hợp',
+            AppSettings.text(context, 'Chưa có đơn hàng phù hợp', 'No matching orders'),
             style: TextStyle(fontSize: 17, fontWeight: FontWeight.w600),
           ),
         ),
         const SizedBox(height: 8),
-        const Center(
+        Center(
           child: Text(
-            'Thử chọn bộ lọc khác hoặc kéo xuống để làm mới.',
+            AppSettings.text(context, 'Thử chọn bộ lọc khác hoặc kéo xuống để làm mới.', 'Try a different filter or pull down to refresh.'),
             textAlign: TextAlign.center,
           ),
         ),
@@ -742,8 +748,8 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
       appBar: AppBar(
         title: Row(
           children: [
-            const Text(
-              'Đơn hàng',
+            Text(
+              AppSettings.text(context, 'Đơn hàng', 'Orders'),
               style: TextStyle(fontWeight: FontWeight.bold),
             ),
             const SizedBox(width: 10),
@@ -799,20 +805,20 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                       color: Colors.red,
                     ),
                     const SizedBox(height: 12),
-                    const Text(
-                      'Không tải được danh sách đơn hàng.',
+                    Text(
+                      AppSettings.text(context, 'Không tải được danh sách đơn hàng.', 'Could not load orders.'),
                       textAlign: TextAlign.center,
                     ),
                     const SizedBox(height: 8),
                     Text(
-                      'Vui lòng kiểm tra kết nối Internet và thử lại.',
+                      AppSettings.text(context, 'Vui lòng kiểm tra kết nối Internet và thử lại.', 'Check your internet connection and try again.'),
                       textAlign: TextAlign.center,
                       style: TextStyle(fontSize: 12, color: context.mutedColor),
                     ),
                     const SizedBox(height: 12),
                     ElevatedButton(
                       onPressed: _refreshOrders,
-                      child: const Text('Thử lại'),
+                      child: Text(AppSettings.text(context, 'Thử lại', 'Retry')),
                     ),
                   ],
                 ),
@@ -840,7 +846,7 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                     Padding(
                       padding: EdgeInsets.symmetric(horizontal: 16),
                       child: Text(
-                        'Theo dõi đơn giặt ủi của bạn (cập nhật trực tiếp)',
+                        AppSettings.text(context, 'Theo dõi đơn giặt ủi của bạn (cập nhật trực tiếp)', 'Track your laundry orders in real time'),
                         style: TextStyle(fontSize: 14, color: context.mutedColor),
                       ),
                     ),

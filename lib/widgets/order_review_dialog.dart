@@ -192,7 +192,7 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
                       const SizedBox(height: 2),
                       Text(
                         'Đơn hàng #${widget.order.id}',
-                        style: TextStyle(fontSize: 13, color: Colors.grey[600]),
+                        style: TextStyle(fontSize: 13, color: context.mutedColor),
                       ),
                     ],
                   ),
@@ -254,7 +254,7 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
               style: TextStyle(
                 fontSize: 13,
                 fontWeight: FontWeight.w600,
-                color: Colors.grey[700],
+                color: context.mutedColor,
               ),
             ),
             const SizedBox(height: 8),
@@ -266,18 +266,18 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
                 return FilterChip(
                   label: Text(tag),
                   selected: isSelected,
-                  selectedColor: AppColors.primary.withAlpha(40),
-                  checkmarkColor: AppColors.primary,
+                  selectedColor: context.accentSurface,
+                  checkmarkColor: context.accentColor,
                   labelStyle: TextStyle(
                     fontSize: 12.5,
                     fontWeight: isSelected ? FontWeight.w600 : FontWeight.normal,
-                    color: isSelected ? AppColors.primary : Colors.grey[800],
+                    color: isSelected ? context.accentColor : context.detailColor,
                   ),
-                  backgroundColor: Colors.grey[100],
+                  backgroundColor: context.insetSurface,
                   shape: RoundedRectangleBorder(
                     borderRadius: BorderRadius.circular(20),
                     side: BorderSide(
-                      color: isSelected ? AppColors.primary : Colors.grey[300]!,
+                      color: isSelected ? context.accentColor : context.cardOutline,
                     ),
                   ),
                   onSelected: (selected) {
@@ -301,21 +301,21 @@ class _OrderReviewDialogState extends State<OrderReviewDialog> {
               maxLength: 300,
               decoration: InputDecoration(
                 hintText: 'Để lại ý kiến đóng góp giúp WashCare phục vụ bạn tốt hơn...',
-                hintStyle: TextStyle(fontSize: 13, color: Colors.grey[400]),
+                hintStyle: TextStyle(fontSize: 13, color: context.mutedColor),
                 filled: true,
-                fillColor: Colors.grey[50],
+                fillColor: context.insetSurface,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[300]!),
+                  borderSide: BorderSide(color: context.cardOutline),
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: BorderSide(color: Colors.grey[200]!),
+                  borderSide: BorderSide(color: context.cardOutline),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(12),
-                  borderSide: const BorderSide(
-                    color: AppColors.primary,
+                  borderSide: BorderSide(
+                    color: context.accentColor,
                     width: 1.5,
                   ),
                 ),

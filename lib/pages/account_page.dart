@@ -788,8 +788,7 @@ class _AccountPageState extends State<AccountPage> {
                       ],
                     ),
                   ),
-                  if (_profile?.role.toLowerCase() == 'admin' ||
-                      _profile?.role.toLowerCase() == 'staff') ...[
+                  if (profile?.role.toLowerCase() == 'admin') ...[
                     const SizedBox(height: 16),
                     Container(
                       padding: const EdgeInsets.all(18),

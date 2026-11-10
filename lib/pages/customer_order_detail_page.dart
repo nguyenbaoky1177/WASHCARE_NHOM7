@@ -120,19 +120,19 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xác nhận hủy đơn'),
+        title: Text(AppSettings.text(context, 'Xác nhận hủy đơn', 'Cancel this order?')),
         content: Text(
-          'Bạn có chắc chắn muốn hủy đơn hàng #${_order.id} không?',
+          AppSettings.text(context, 'Bạn có chắc chắn muốn hủy đơn hàng #${_order.id} không?', 'Cancel order #${_order.id}?'),
         ),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Không'),
+            child: Text(AppSettings.text(context, 'Không', 'Keep order')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Hủy đơn'),
+            child: Text(AppSettings.text(context, 'Hủy đơn', 'Cancel order')),
           ),
         ],
       ),
@@ -160,8 +160,8 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
         SnackBar(
           content: Text(
             updated.isEmpty
-                ? 'Không thể hủy đơn. Trạng thái đơn có thể đã thay đổi.'
-                : 'Đã hủy đơn hàng thành công',
+                ? AppSettings.text(context, 'Không thể hủy đơn. Trạng thái đơn có thể đã thay đổi.', 'Could not cancel this order. Its status may have changed.')
+                : AppSettings.text(context, 'Đã hủy đơn hàng thành công', 'Order cancelled'),
           ),
         ),
       );
@@ -195,7 +195,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
       backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Text(
-          'Chi tiết đơn #${_order.id}',
+          AppSettings.text(context, 'Chi tiết đơn #${_order.id}', 'Order #${_order.id}'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: darkBlue,
@@ -203,7 +203,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),
-            tooltip: 'Làm mới',
+            tooltip: AppSettings.text(context, 'Làm mới', 'Refresh'),
             onPressed: _reloadOrder,
           ),
         ],
@@ -280,7 +280,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       Text(
-                        'Đơn hàng #${_order.id}',
+                        AppSettings.text(context, 'Đơn hàng #${_order.id}', 'Order #${_order.id}'),
                         style: TextStyle(
                           fontSize: 16,
                           fontWeight: FontWeight.bold,
@@ -292,7 +292,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    'Đặt lúc: ${_order.formattedCreatedAt}',
+                    AppSettings.text(context, 'Đặt lúc: ${_order.formattedCreatedAt}', 'Placed: ${_order.formattedCreatedAt}'),
                     style: TextStyle(
                       fontSize: 12,
                       color: context.mutedColor,
@@ -308,12 +308,33 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   }
 
   Widget _buildTimelineCard() {
+    String text(String vi, String en) => AppSettings.text(context, vi, en);
     final stages = [
-      {'key': 'pending', 'title': 'Chờ xác nhận', 'desc': 'Tiệm đang tiếp nhận đơn'},
-      {'key': 'confirmed', 'title': 'Đã xác nhận', 'desc': 'Tài xế nhận lịch lấy đồ'},
-      {'key': 'washing', 'title': 'Đang xử lý', 'desc': 'Đang phân loại và giặt sấy'},
-      {'key': 'delivering', 'title': 'Đang giao', 'desc': 'Đang trên đường giao trả đồ'},
-      {'key': 'completed', 'title': 'Hoàn thành', 'desc': 'Đã hoàn tất đơn hàng'},
+      {
+        'key': 'pending',
+        'title': text('Chờ xác nhận', 'Awaiting confirmation'),
+        'desc': text('Tiệm đang tiếp nhận đơn', 'The laundry is reviewing your order'),
+      },
+      {
+        'key': 'confirmed',
+        'title': text('Đã xác nhận', 'Confirmed'),
+        'desc': text('Tài xế nhận lịch lấy đồ', 'Pickup has been scheduled'),
+      },
+      {
+        'key': 'washing',
+        'title': text('Đang xử lý', 'Washing'),
+        'desc': text('Đang phân loại và giặt sấy', 'Your laundry is being sorted and washed'),
+      },
+      {
+        'key': 'delivering',
+        'title': text('Đang giao', 'Out for delivery'),
+        'desc': text('Đang trên đường giao trả đồ', 'Your laundry is on its way back'),
+      },
+      {
+        'key': 'completed',
+        'title': text('Hoàn thành', 'Completed'),
+        'desc': text('Đã hoàn tất đơn hàng', 'Your order is complete'),
+      },
     ];
 
     int currentStep = 0;
@@ -351,7 +372,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 Icon(Icons.route_outlined, color: context.accentColor, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  'Tiến trình xử lý',
+                  AppSettings.text(context, 'Tiến trình xử lý', 'Order progress'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -447,7 +468,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 Icon(Icons.local_shipping_outlined, color: context.accentColor, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  'Thông tin giao nhận đồ',
+                  AppSettings.text(context, 'Thông tin giao nhận đồ', 'Pickup and delivery'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -459,27 +480,27 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
             const Divider(height: 24),
             _buildInfoRow(
               icon: Icons.calendar_today_outlined,
-              label: 'Thời gian lấy đồ hẹn trước',
+              label: AppSettings.text(context, 'Thời gian lấy đồ hẹn trước', 'Scheduled pickup'),
               value: _order.formattedPickupTime,
               highlight: true,
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               icon: Icons.person_outline,
-              label: 'Khách hàng',
+              label: AppSettings.text(context, 'Khách hàng', 'Customer'),
               value: '${_order.customerName} • ${_order.phone}',
             ),
             const SizedBox(height: 12),
             _buildInfoRow(
               icon: Icons.location_on_outlined,
-              label: 'Địa chỉ lấy & giao đồ',
+              label: AppSettings.text(context, 'Địa chỉ lấy & giao đồ', 'Pickup and delivery address'),
               value: _order.address,
             ),
             if (_order.note != null && _order.note!.trim().isNotEmpty) ...[
               const SizedBox(height: 12),
               _buildInfoRow(
                 icon: Icons.edit_note,
-                label: 'Ghi chú cho tiệm',
+                label: AppSettings.text(context, 'Ghi chú cho tiệm', 'Notes for the laundry'),
                 value: _order.note!,
               ),
             ],
@@ -542,7 +563,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                     Icon(Icons.dry_cleaning_outlined, color: context.accentColor, size: 20),
                     SizedBox(width: 8),
                     Text(
-                      'Dịch vụ đã chọn',
+                      AppSettings.text(context, 'Dịch vụ đã chọn', 'Selected services'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -552,17 +573,21 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   ],
                 ),
                 Text(
-                  '${_order.items.length} món',
+                  AppSettings.text(
+                    context,
+                    '${_order.items.length} món',
+                    '${_order.items.length} items',
+                  ),
                   style: TextStyle(fontSize: 13, color: context.mutedColor),
                 ),
               ],
             ),
             const Divider(height: 24),
             if (_order.items.isEmpty)
-              const Center(
+              Center(
                 child: Padding(
                   padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Text('Không có thông tin chi tiết dịch vụ'),
+                  child: Text(AppSettings.text(context, 'Không có thông tin chi tiết dịch vụ', 'No service details')),
                 ),
               )
             else
@@ -601,7 +626,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                               ),
                             ),
                             Text(
-                              'Số lượng: ${item.formattedQuantity} ${item.serviceUnit}',
+                              AppSettings.text(context, 'Số lượng: ${item.formattedQuantity} ${item.serviceUnit}', 'Quantity: ${item.formattedQuantity} ${item.serviceUnit}'),
                               style: TextStyle(
                                 fontSize: 12,
                                 color: context.mutedColor,
@@ -740,7 +765,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                     Icon(Icons.star_rate_rounded, color: Colors.amber, size: 22),
                     SizedBox(width: 8),
                     Text(
-                      'Đánh giá của bạn',
+                      AppSettings.text(context, 'Đánh giá của bạn', 'Your review'),
                       style: TextStyle(
                         fontSize: 16,
                         fontWeight: FontWeight.bold,
@@ -753,14 +778,14 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   TextButton.icon(
                     onPressed: _openReviewDialog,
                     icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Sửa'),
+                    label: Text(AppSettings.text(context, 'Sửa', 'Edit')),
                   ),
               ],
             ),
             const Divider(height: 20),
             if (_review == null) ...[
               Text(
-                'Bạn hài lòng với dịch vụ của WashCare chứ? Hãy để lại đánh giá nhé!',
+                AppSettings.text(context, 'Bạn hài lòng với dịch vụ của WashCare chứ? Hãy để lại đánh giá nhé!', 'How was your WashCare experience? Leave a review.'),
                 style: TextStyle(fontSize: 13, color: context.mutedColor),
               ),
               const SizedBox(height: 12),
@@ -773,7 +798,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   ),
                   onPressed: _openReviewDialog,
                   icon: const Icon(Icons.rate_review_outlined),
-                  label: const Text('Viết đánh giá'),
+                  label: Text(AppSettings.text(context, 'Viết đánh giá', 'Write a review')),
                 ),
               ),
             ] else ...[
@@ -824,7 +849,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Cần hỗ trợ về đơn hàng này?',
+                  AppSettings.text(context, 'Cần hỗ trợ về đơn hàng này?', 'Need help with this order?'),
                   style: TextStyle(
                     fontSize: 13,
                     fontWeight: FontWeight.bold,
@@ -876,7 +901,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                   child: CircularProgressIndicator(strokeWidth: 2),
                 )
               : const Icon(Icons.cancel_outlined, size: 18),
-          label: Text(_isCancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
+          label: Text(_isCancelling ? AppSettings.text(context, 'Đang hủy...', 'Cancelling…') : AppSettings.text(context, 'Hủy đơn hàng', 'Cancel order')),
         ),
       ),
     );

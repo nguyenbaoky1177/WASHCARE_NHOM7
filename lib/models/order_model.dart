@@ -111,24 +111,17 @@ class OrderModel {
       totalPrice > 0 &&
       !isCodCollected;
 
-  String get statusDisplayName {
-    switch (status) {
-      case 'pending':
-        return 'Chờ xác nhận';
-      case 'confirmed':
-        return 'Đã xác nhận';
-      case 'washing':
-        return 'Đang giặt sấy';
-      case 'delivering':
-        return 'Đang giao hàng';
-      case 'completed':
-        return 'Hoàn thành';
-      case 'cancelled':
-        return 'Đã hủy';
-      default:
-        return status;
-    }
-  }
+  String get statusDisplayName => statusLabel();
+
+  String statusLabel({bool english = false}) => switch (status) {
+    'pending' => english ? 'Awaiting confirmation' : 'Chờ xác nhận',
+    'confirmed' => english ? 'Confirmed' : 'Đã xác nhận',
+    'washing' => english ? 'Washing' : 'Đang giặt sấy',
+    'delivering' => english ? 'Out for delivery' : 'Đang giao hàng',
+    'completed' => english ? 'Completed' : 'Hoàn thành',
+    'cancelled' => english ? 'Cancelled' : 'Đã hủy',
+    _ => status,
+  };
 
   Color get statusColor {
     switch (status) {

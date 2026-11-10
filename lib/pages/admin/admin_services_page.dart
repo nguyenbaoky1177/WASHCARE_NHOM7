@@ -42,7 +42,7 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
     });
     try {
       await future;
-      ServiceCache.getServices(forceNetwork: true);
+      await ServiceCache.getServices(forceNetwork: true);
     } catch (_) {}
   }
 
@@ -56,10 +56,15 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
   Future<void> _toggleServiceStatus(ServiceModel service, bool newStatus) async {
     setState(() => _actionLoading = true);
     try {
-      await supabase
+      final updated = await supabase
           .from('services')
           .update({'is_active': newStatus})
-          .eq('id', service.id);
+          .eq('id', service.id)
+          .select('id');
+      if (updated.isEmpty) {
+        _showMessage('Không cập nhật được dịch vụ. Hãy kiểm tra quyền và thử lại.');
+        return;
+      }
 
       _showMessage(newStatus
           ? 'Đã kích hoạt dịch vụ "${service.name}"'
@@ -140,10 +145,14 @@ class _AdminServicesPageState extends State<AdminServicesPage> {
 
     setState(() => _actionLoading = true);
     try {
-      await supabase.from('services').update({
+      final updated = await supabase.from('services').update({
         'price': newPrice,
         'description': newDesc,
-      }).eq('id', service.id);
+      }).eq('id', service.id).select('id');
+      if (updated.isEmpty) {
+        _showMessage('Không cập nhật được dịch vụ. Hãy kiểm tra quyền và thử lại.');
+        return;
+      }
 
       _showMessage('Đã cập nhật dịch vụ "${service.name}"');
       await _refresh();
