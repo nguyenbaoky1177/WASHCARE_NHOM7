@@ -213,7 +213,7 @@ class _OrderPageState extends State<OrderPage> {
       initialDate: _pickupTime ?? now.add(const Duration(days: 1)),
       firstDate: now,
       lastDate: now.add(const Duration(days: 90)),
-      helpText: 'Chọn ngày hẹn lấy đồ',
+      helpText: AppSettings.text(context, 'Chọn ngày hẹn lấy đồ', 'Select a pickup date'),
     );
 
     if (date == null || !mounted) return;
@@ -221,7 +221,7 @@ class _OrderPageState extends State<OrderPage> {
     final time = await showTimePicker(
       context: context,
       initialTime: TimeOfDay.fromDateTime(_pickupTime ?? DateTime.now()),
-      helpText: 'Chọn giờ hẹn lấy đồ',
+      helpText: AppSettings.text(context, 'Chọn giờ hẹn lấy đồ', 'Select a pickup time'),
     );
 
     if (time == null || !mounted) return;
@@ -236,8 +236,8 @@ class _OrderPageState extends State<OrderPage> {
 
     if (selected.isBefore(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng chọn thời gian trong tương lai.'),
+        SnackBar(
+          content: Text(AppSettings.text(context, 'Vui lòng chọn thời gian trong tương lai.', 'Choose a time in the future.')),
         ),
       );
       return;
@@ -260,8 +260,8 @@ class _OrderPageState extends State<OrderPage> {
 
     if (items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Vui lòng chọn ít nhất 1 dịch vụ giặt ủi.'),
+        SnackBar(
+          content: Text(AppSettings.text(context, 'Vui lòng chọn ít nhất 1 dịch vụ giặt ủi.', 'Select at least one laundry service.')),
         ),
       );
       return;
@@ -269,7 +269,7 @@ class _OrderPageState extends State<OrderPage> {
 
     if (_pickupTime == null || !_pickupTime!.isAfter(DateTime.now())) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Vui lòng chọn thời gian lấy đồ.')),
+        SnackBar(content: Text(AppSettings.text(context, 'Vui lòng chọn thời gian lấy đồ.', 'Select a pickup time.'))),
       );
       return;
     }
@@ -462,8 +462,8 @@ class _OrderPageState extends State<OrderPage> {
     return Scaffold(
       backgroundColor: context.pageSurface,
       appBar: AppBar(
-        title: const Text(
-          'Đặt lịch giặt ủi',
+        title: Text(
+          AppSettings.text(context, 'Đặt lịch giặt ủi', 'Schedule laundry'),
           style: TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: primaryBlue,
@@ -482,7 +482,7 @@ class _OrderPageState extends State<OrderPage> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     Text(_loadError!, textAlign: TextAlign.center),
-                    TextButton(onPressed: _loadData, child: const Text('Thử lại')),
+                    TextButton(onPressed: _loadData, child: Text(AppSettings.text(context, 'Thử lại', 'Retry'))),
                   ],
                 ))
               : Form(
@@ -491,9 +491,9 @@ class _OrderPageState extends State<OrderPage> {
                 padding: const EdgeInsets.fromLTRB(16, 16, 16, 30),
                 children: [
                   // 1. Service Selection Section
-                  const SectionTitle(
-                    '1. Chọn dịch vụ giặt ủi',
-                    subtitle: 'Chọn khối lượng hoặc số lượng tương ứng',
+                  SectionTitle(
+                    AppSettings.text(context, '1. Chọn dịch vụ giặt ủi', '1. Choose laundry services'),
+                    subtitle: AppSettings.text(context, 'Chọn khối lượng hoặc số lượng tương ứng', 'Choose a weight or quantity'),
                   ),
                   if (_services.isEmpty)
                     const Text('Cửa hàng hiện chưa có dịch vụ đang hoạt động.'),
@@ -502,31 +502,31 @@ class _OrderPageState extends State<OrderPage> {
                   const SizedBox(height: 18),
 
                   // 2. Delivery Speed Options
-                  const SectionTitle('2. Thời gian hoàn thành mong muốn'),
+                  SectionTitle(AppSettings.text(context, '2. Thời gian hoàn thành mong muốn', '2. Turnaround time')),
                   _buildDeliverySpeedSelector(),
 
                   const SizedBox(height: 18),
 
                   // 3. Pickup Schedule Selector
-                  const SectionTitle('3. Lịch hẹn tài xế đến lấy đồ'),
+                  SectionTitle(AppSettings.text(context, '3. Lịch hẹn tài xế đến lấy đồ', '3. Pickup appointment')),
                   _buildPickupSchedulePicker(),
 
                   const SizedBox(height: 18),
 
                   // 4. Contact & Address Details
-                  const SectionTitle('4. Thông tin người nhận & Địa chỉ'),
+                  SectionTitle(AppSettings.text(context, '4. Thông tin người nhận & Địa chỉ', '4. Recipient and address')),
                   _buildCustomerFields(),
 
                   const SizedBox(height: 18),
 
                   // 5. Voucher Code Input
-                  const SectionTitle('5. Mã ưu đãi / Voucher'),
+                  SectionTitle(AppSettings.text(context, '5. Mã ưu đãi / Voucher', '5. Promo code')),
                   _buildVoucherInput(),
 
                   const SizedBox(height: 18),
 
                   // 6. Payment Method Selector
-                  const SectionTitle('6. Phương thức thanh toán'),
+                  SectionTitle(AppSettings.text(context, '6. Phương thức thanh toán', '6. Payment method')),
                   _buildPaymentMethodSelector(),
 
                   const SizedBox(height: 18),
@@ -677,9 +677,9 @@ class _OrderPageState extends State<OrderPage> {
         Expanded(
           child: _speedCard(
             type: 'standard',
-            title: 'Tiêu chuẩn',
-            time: '24 - 48 giờ',
-            fee: _subtotal >= 100000 ? 'Miễn phí' : '15.000 đ',
+            title: AppSettings.text(context, 'Tiêu chuẩn', 'Standard'),
+            time: AppSettings.text(context, '24 - 48 giờ', '24–48 hours'),
+            fee: _subtotal >= 100000 ? AppSettings.text(context, 'Miễn phí', 'Free') : '15.000 đ',
             icon: Icons.local_shipping_outlined,
           ),
         ),
@@ -687,8 +687,8 @@ class _OrderPageState extends State<OrderPage> {
         Expanded(
           child: _speedCard(
             type: 'express',
-            title: 'Hỏa tốc',
-            time: '4 - 6 giờ',
+            title: AppSettings.text(context, 'Hỏa tốc', 'Express'),
+            time: AppSettings.text(context, '4 - 6 giờ', '4–6 hours'),
             fee: '+25.000 đ',
             icon: Icons.bolt,
           ),
@@ -793,13 +793,13 @@ class _OrderPageState extends State<OrderPage> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Thời gian shipper đến nhận:',
+                      AppSettings.text(context, 'Thời gian shipper đến nhận:', 'Pickup time:'),
                       style: TextStyle(fontSize: 12, color: context.mutedColor),
                     ),
                     const SizedBox(height: 2),
                     Text(
                       _pickupTime == null
-                          ? 'Chưa chọn thời gian'
+                          ? AppSettings.text(context, 'Chưa chọn thời gian', 'Choose a pickup time')
                           : '${_pickupTime!.day.toString().padLeft(2, '0')}/${_pickupTime!.month.toString().padLeft(2, '0')}/${_pickupTime!.year} lúc ${_pickupTime!.hour.toString().padLeft(2, '0')}:${_pickupTime!.minute.toString().padLeft(2, '0')}',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
@@ -823,7 +823,7 @@ class _OrderPageState extends State<OrderPage> {
                   ),
                 ),
                 onPressed: _choosePickupTime,
-                child: const Text('Thay đổi', style: TextStyle(fontSize: 12)),
+                child: Text(AppSettings.text(context, 'Thay đổi', 'Change'), style: TextStyle(fontSize: 12)),
               ),
             ],
           ),
@@ -848,7 +848,7 @@ class _OrderPageState extends State<OrderPage> {
               labelText: AppSettings.text(context, 'Họ và tên người nhận *', 'Recipient name *'),
               prefixIcon: Icon(Icons.person_outline),
             ),
-            validator: (v) => v == null || v.trim().isEmpty ? 'Nhập họ tên' : null,
+            validator: (v) => v == null || v.trim().isEmpty ? AppSettings.text(context, 'Nhập họ tên', 'Enter the recipient name') : null,
           ),
           const SizedBox(height: 12),
           TextFormField(
@@ -859,10 +859,10 @@ class _OrderPageState extends State<OrderPage> {
               prefixIcon: Icon(Icons.phone_outlined),
             ),
             validator: (v) {
-              if (v == null || v.trim().isEmpty) return 'Nhập số điện thoại';
+              if (v == null || v.trim().isEmpty) return AppSettings.text(context, 'Nhập số điện thoại', 'Enter a phone number');
               final clean = v.trim();
               if (!RegExp(r'^(0[1-9][0-9]{8,9})$').hasMatch(clean)) {
-                return 'Số điện thoại 10 số bắt đầu bằng 0';
+                return AppSettings.text(context, 'Số điện thoại 10 số bắt đầu bằng 0', 'Enter a 10-digit phone number starting with 0');
               }
               return null;
             },
@@ -874,7 +874,7 @@ class _OrderPageState extends State<OrderPage> {
               labelText: AppSettings.text(context, 'Địa chỉ nhận và giao đồ *', 'Pickup and delivery address *'),
               prefixIcon: Icon(Icons.location_on_outlined),
             ),
-            validator: (v) => v == null || v.trim().isEmpty ? 'Nhập địa chỉ nhận đồ' : null,
+            validator: (v) => v == null || v.trim().isEmpty ? AppSettings.text(context, 'Nhập địa chỉ nhận đồ', 'Enter the pickup address') : null,
           ),
           const SizedBox(height: 6),
           Align(
@@ -930,7 +930,7 @@ class _OrderPageState extends State<OrderPage> {
             maxLines: 2,
             decoration: InputDecoration(
               labelText: AppSettings.text(context, 'Ghi chú cho xưởng giặt (nếu có)', 'Notes for the laundry (optional)'),
-              hintText: 'Ví dụ: giặt riêng áo trắng, ủi li phẳng...',
+              hintText: AppSettings.text(context, 'Ví dụ: giặt riêng áo trắng, ủi li phẳng...', 'For example, wash white shirts separately'),
               prefixIcon: Icon(Icons.edit_note),
             ),
           ),
@@ -954,7 +954,7 @@ class _OrderPageState extends State<OrderPage> {
               controller: _voucherController,
               textCapitalization: TextCapitalization.characters,
               decoration: InputDecoration(
-                hintText: 'Nhập mã: WASHCARE20',
+                hintText: AppSettings.text(context, 'Nhập mã: WASHCARE20', 'Enter code: WASHCARE20'),
                 prefixIcon: Icon(
                   Icons.confirmation_num_outlined,
                   color: context.accentColor,
@@ -975,7 +975,7 @@ class _OrderPageState extends State<OrderPage> {
               ),
             ),
             onPressed: _checkingVoucher || _submitting ? null : _applyVoucher,
-            child: Text(_checkingVoucher ? 'Đang kiểm tra...' : _discountAmount > 0 ? 'Đã áp dụng' : 'Áp dụng'),
+            child: Text(_checkingVoucher ? AppSettings.text(context, 'Đang kiểm tra...', 'Checking…') : _discountAmount > 0 ? AppSettings.text(context, 'Đã áp dụng', 'Applied') : AppSettings.text(context, 'Áp dụng', 'Apply')),
           ),
         ],
       ),
@@ -986,14 +986,14 @@ class _OrderPageState extends State<OrderPage> {
     final options = [
       (
         'cod',
-        'Tiền mặt khi giao nhận (COD)',
-        'Thanh toán trực tiếp cho shipper khi nhận đồ sạch',
+        AppSettings.text(context, 'Tiền mặt khi giao nhận (COD)', 'Cash on delivery (COD)'),
+        AppSettings.text(context, 'Thanh toán trực tiếp cho shipper khi nhận đồ sạch', 'Pay the driver when your laundry is delivered'),
         Icons.payments_outlined,
       ),
       (
         'momo',
         'MoMo Sandbox',
-        'Thanh toán qua cổng thử nghiệm chính thức của MoMo',
+        AppSettings.text(context, 'Thanh toán qua cổng thử nghiệm chính thức của MoMo', 'Use the official MoMo test gateway'),
         Icons.account_balance_wallet_outlined,
       ),
     ];

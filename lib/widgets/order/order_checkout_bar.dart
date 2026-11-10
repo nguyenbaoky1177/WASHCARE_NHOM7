@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/app_settings.dart';
 
 class OrderCheckoutBar extends StatelessWidget {
   const OrderCheckoutBar({
@@ -38,26 +39,29 @@ class OrderCheckoutBar extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'Tổng thanh toán:',
+                  AppSettings.text(context, 'Tổng thanh toán:', 'Order total:'),
                   style: TextStyle(fontSize: 12, color: context.mutedColor),
                 ),
                 Text(
                   total,
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: primaryBlue,
+                    color: context.accentColor,
                   ),
                 ),
               ],
             ),
           ),
-          SizedBox(
-            height: 48,
+          const SizedBox(width: 12),
+          Flexible(
+            flex: 2,
             child: FilledButton.icon(
               style: FilledButton.styleFrom(
-                backgroundColor: primaryBlue, foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(horizontal: 20),
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+                minimumSize: const Size(0, 48),
+                padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
                 shape: RoundedRectangleBorder(
                   borderRadius: BorderRadius.circular(14),
                 ),
@@ -73,7 +77,12 @@ class OrderCheckoutBar extends StatelessWidget {
                       ),
                     )
                   : const Icon(Icons.check_circle_outline),
-              label: Text(submitting ? 'Đang đặt...' : 'Xác nhận đặt đơn'),
+              label: Text(
+                submitting
+                    ? AppSettings.text(context, 'Đang đặt...', 'Submitting…')
+                    : AppSettings.text(context, 'Xác nhận đặt đơn', 'Confirm order'),
+                textAlign: TextAlign.center,
+              ),
             ),
           ),
         ],

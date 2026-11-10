@@ -29,6 +29,13 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     });
   }
 
+  String _labelForDisplay(String label) => switch (label) {
+    'Nhà riêng' => AppSettings.text(context, label, 'Home'),
+    'Văn phòng' => AppSettings.text(context, label, 'Office'),
+    'Khác' => AppSettings.text(context, label, 'Other'),
+    _ => label,
+  };
+
   IconData _getLabelIcon(String label) {
     switch (label) {
       case 'Nhà riêng':
@@ -87,8 +94,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         const SizedBox(height: 16),
                         Text(
                           existing == null
-                              ? 'Thêm địa chỉ mới'
-                              : 'Chỉnh sửa địa chỉ',
+                              ? AppSettings.text(context, 'Thêm địa chỉ mới', 'Add address')
+                              : AppSettings.text(context, 'Chỉnh sửa địa chỉ', 'Edit address'),
                           style: TextStyle(
                             fontSize: 18,
                             fontWeight: FontWeight.bold,
@@ -97,13 +104,14 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         ),
                         const SizedBox(height: 16),
                         // Chọn loại nhãn: Nhà riêng / Văn phòng / Khác
-                        Row(
+                        Wrap(
+                          spacing: 8,
                           children: ['Nhà riêng', 'Văn phòng', 'Khác'].map((lbl) {
                             final isSelected = selectedLabel == lbl;
                             return Padding(
-                              padding: const EdgeInsets.only(right: 8),
+                              padding: EdgeInsets.zero,
                               child: ChoiceChip(
-                                label: Text(lbl),
+                                label: Text(_labelForDisplay(lbl)),
                                 selected: isSelected,
                                 selectedColor: primaryBlue.withValues(alpha: 0.15),
                                 labelStyle: TextStyle(
@@ -125,15 +133,15 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         TextFormField(
                           controller: addressController,
                           maxLines: 2,
-                          decoration: const InputDecoration(
-                            labelText: 'Địa chỉ chi tiết *',
-                            hintText: 'Số nhà, ngõ, tên đường, phường/xã, quận/huyện',
+                          decoration: InputDecoration(
+                            labelText: AppSettings.text(context, 'Địa chỉ chi tiết *', 'Street address *'),
+                            hintText: AppSettings.text(context, 'Số nhà, ngõ, tên đường, phường/xã, quận/huyện', 'House number, street, ward and district'),
                             prefixIcon: Icon(Icons.pin_drop_outlined),
                             border: OutlineInputBorder(),
                           ),
                           validator: (val) {
                             if (val == null || val.trim().isEmpty) {
-                              return 'Vui lòng nhập địa chỉ nhận/giao đồ';
+                              return AppSettings.text(context, 'Vui lòng nhập địa chỉ nhận/giao đồ', 'Enter a pickup and delivery address');
                             }
                             return null;
                           },
@@ -141,8 +149,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         const SizedBox(height: 14),
                         TextFormField(
                           controller: nameController,
-                          decoration: const InputDecoration(
-                            labelText: 'Tên người nhận (tùy chọn)',
+                          decoration: InputDecoration(
+                            labelText: AppSettings.text(context, 'Tên người nhận (tùy chọn)', 'Recipient name (optional)'),
                             prefixIcon: Icon(Icons.person_outline),
                             border: OutlineInputBorder(),
                           ),
@@ -151,8 +159,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         TextFormField(
                           controller: phoneController,
                           keyboardType: TextInputType.phone,
-                          decoration: const InputDecoration(
-                            labelText: 'Số điện thoại (tùy chọn)',
+                          decoration: InputDecoration(
+                            labelText: AppSettings.text(context, 'Số điện thoại (tùy chọn)', 'Phone number (optional)'),
                             prefixIcon: Icon(Icons.phone_outlined),
                             border: OutlineInputBorder(),
                           ),
@@ -160,8 +168,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                         const SizedBox(height: 10),
                         SwitchListTile(
                           contentPadding: EdgeInsets.zero,
-                          title: const Text(
-                            'Đặt làm địa chỉ mặc định',
+                          title: Text(
+                            AppSettings.text(context, 'Đặt làm địa chỉ mặc định', 'Set as default address'),
                             style: TextStyle(fontSize: 14),
                           ),
                           value: isDefault,
@@ -203,8 +211,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                   if (!context.mounted) return;
                                   setModalState(() => saving = false);
                                   ScaffoldMessenger.of(context).showSnackBar(
-                                    const SnackBar(
-                                      content: Text('Không lưu được địa chỉ. Vui lòng thử lại.'),
+                                    SnackBar(
+                                      content: Text(AppSettings.text(context, 'Không lưu được địa chỉ. Vui lòng thử lại.', 'Could not save the address. Please try again.')),
                                     ),
                                   );
                                 }
@@ -212,8 +220,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             },
                             child: Text(
                               existing == null
-                                  ? 'Lưu địa chỉ'
-                                  : 'Cập nhật thay đổi',
+                                  ? AppSettings.text(context, 'Lưu địa chỉ', 'Save address')
+                                  : AppSettings.text(context, 'Cập nhật thay đổi', 'Save changes'),
                               style: const TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -245,17 +253,17 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (ctx) => AlertDialog(
-        title: const Text('Xác nhận xóa'),
+        title: Text(AppSettings.text(context, 'Xác nhận xóa', 'Delete address?')),
         content: Text('Bạn có chắc muốn xóa địa chỉ "${address.fullAddress}"?'),
         actions: [
           TextButton(
             onPressed: () => Navigator.pop(ctx, false),
-            child: const Text('Hủy'),
+            child: Text(AppSettings.text(context, 'Hủy', 'Cancel')),
           ),
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () => Navigator.pop(ctx, true),
-            child: const Text('Xóa'),
+            child: Text(AppSettings.text(context, 'Xóa', 'Delete')),
           ),
         ],
       ),
@@ -266,7 +274,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
       _loadAddresses();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Đã xóa địa chỉ')),
+          SnackBar(content: Text(AppSettings.text(context, 'Đã xóa địa chỉ', 'Address deleted'))),
         );
       }
     }
@@ -278,7 +286,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
       backgroundColor: context.pageSurface,
       appBar: AppBar(
         title: Text(
-          widget.isSelectMode ? 'Chọn địa chỉ nhận đồ' : 'Sổ địa chỉ',
+          widget.isSelectMode ? AppSettings.text(context, 'Chọn địa chỉ nhận đồ', 'Select a pickup address') : AppSettings.text(context, 'Sổ địa chỉ', 'Address book'),
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
         backgroundColor: darkBlue,
@@ -319,7 +327,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                   ),
                   const SizedBox(height: 16),
                   Text(
-                    'Chưa có địa chỉ nào được lưu',
+                    AppSettings.text(context, 'Chưa có địa chỉ nào được lưu', 'No saved addresses'),
                     style: TextStyle(
                       fontSize: 16,
                       fontWeight: FontWeight.bold,
@@ -328,7 +336,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Lưu địa chỉ giúp bạn đặt dịch vụ nhanh chóng hơn',
+                    AppSettings.text(context, 'Lưu địa chỉ giúp bạn đặt dịch vụ nhanh chóng hơn', 'Save an address for faster booking'),
                     style: TextStyle(fontSize: 13, color: context.mutedColor),
                   ),
                   const SizedBox(height: 20),
@@ -336,7 +344,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                     style: FilledButton.styleFrom(backgroundColor: primaryBlue),
                     onPressed: () => _openAddressForm(),
                     icon: const Icon(Icons.add),
-                    label: const Text('Thêm địa chỉ ngay'),
+                    label: Text(AppSettings.text(context, 'Thêm địa chỉ ngay', 'Add an address')),
                   ),
                 ],
               ),
@@ -389,7 +397,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             ),
                             const SizedBox(width: 10),
                             Text(
-                              item.label,
+                              _labelForDisplay(item.label),
                               style: TextStyle(
                                 fontSize: 16,
                                 fontWeight: FontWeight.bold,
@@ -408,8 +416,8 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                                   borderRadius: BorderRadius.circular(6),
                                   border: Border.all(color: Colors.green),
                                 ),
-                                child: const Text(
-                                  'Mặc định',
+                                child: Text(
+                                  AppSettings.text(context, 'Mặc định', 'Default'),
                                   style: TextStyle(
                                     fontSize: 11,
                                     fontWeight: FontWeight.bold,
@@ -432,33 +440,33 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                               },
                               itemBuilder: (ctx) => [
                                 if (!item.isDefault)
-                                  const PopupMenuItem(
+                                  PopupMenuItem(
                                     value: 'default',
                                     child: Row(
                                       children: [
                                         Icon(Icons.check_circle_outline, size: 18),
                                         SizedBox(width: 8),
-                                        Text('Đặt làm mặc định'),
+                                        Text(AppSettings.text(context, 'Đặt làm mặc định', 'Set as default')),
                                       ],
                                     ),
                                   ),
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'edit',
                                   child: Row(
                                     children: [
                                       Icon(Icons.edit_outlined, size: 18),
                                       SizedBox(width: 8),
-                                      Text('Chỉnh sửa'),
+                                      Text(AppSettings.text(context, 'Chỉnh sửa', 'Edit')),
                                     ],
                                   ),
                                 ),
-                                const PopupMenuItem(
+                                PopupMenuItem(
                                   value: 'delete',
                                   child: Row(
                                     children: [
                                       Icon(Icons.delete_outline, color: Colors.red, size: 18),
                                       SizedBox(width: 8),
-                                      Text('Xóa', style: TextStyle(color: Colors.red)),
+                                      Text(AppSettings.text(context, 'Xóa', 'Delete'), style: TextStyle(color: Colors.red)),
                                     ],
                                   ),
                                 ),
@@ -490,7 +498,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                               Text(
                                 item.recipientName.isNotEmpty
                                     ? item.recipientName
-                                    : 'Không có tên',
+                                    : AppSettings.text(context, 'Không có tên', 'No recipient name'),
                                 style: TextStyle(
                                   fontSize: 13,
                                   color: context.mutedColor,
@@ -519,7 +527,7 @@ class _SavedAddressesPageState extends State<SavedAddressesPage> {
                             child: TextButton.icon(
                               onPressed: () => Navigator.pop(context, item),
                               icon: const Icon(Icons.check, size: 18),
-                              label: const Text('Giao đến địa chỉ này'),
+                              label: Text(AppSettings.text(context, 'Giao đến địa chỉ này', 'Use this address')),
                               style: TextButton.styleFrom(
                                 foregroundColor: context.accentColor,
                               ),

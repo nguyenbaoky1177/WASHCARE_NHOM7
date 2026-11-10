@@ -39,6 +39,9 @@ class _HomePageState extends State<HomePage> {
       'title': 'GIẢM 20.000đ ĐƠN ĐẦU TIÊN',
       'subtitle': 'Nhập mã: WASHCARE20 khi đặt đơn',
       'tag': 'ƯU ĐÃI MỚI',
+      'titleEn': 'SAVE ₫20,000 ON YOUR FIRST ORDER',
+      'subtitleEn': 'Use code WASHCARE20 at checkout',
+      'tagEn': 'NEW OFFER',
       'icon': Icons.card_giftcard,
       'colors': [Color(0xFF17365D), Color(0xFF2878D0)],
     },
@@ -46,6 +49,9 @@ class _HomePageState extends State<HomePage> {
       'title': 'MÙA MƯA KHÔNG LO ẨM MỐC',
       'subtitle': 'Sấy tiệt trùng nhiệt độ cao chỉ trong 2 giờ',
       'tag': 'SẤY KHÔ 2H',
+      'titleEn': 'KEEP LAUNDRY DRY IN RAINY SEASON',
+      'subtitleEn': 'High-temperature drying in just 2 hours',
+      'tagEn': '2-HOUR DRYING',
       'icon': Icons.wb_sunny_outlined,
       'colors': [Color(0xFF0F766E), Color(0xFF14B8A6)],
     },
@@ -53,6 +59,9 @@ class _HomePageState extends State<HomePage> {
       'title': 'CHĂM SÓC TRANG PHỤC CAO CẤP',
       'subtitle': 'Giặt hấp chuẩn tiệm cho Vest, Đầm dạ hội & Giày hiệu',
       'tag': 'CHUYÊN SÂU',
+      'titleEn': 'EXPERT GARMENT CARE',
+      'subtitleEn': 'Dry cleaning for suits, eveningwear and shoes',
+      'tagEn': 'SPECIALIST CARE',
       'icon': Icons.dry_cleaning,
       'colors': [Color(0xFF581C87), Color(0xFF9333EA)],
     },
@@ -96,13 +105,13 @@ class _HomePageState extends State<HomePage> {
   String _getGreeting() {
     final hour = DateTime.now().hour;
     if (hour >= 5 && hour < 11) {
-      return 'Chào buổi sáng ☀️';
+      return AppSettings.text(context, 'Chào buổi sáng ☀️', 'Good morning ☀️');
     } else if (hour >= 11 && hour < 14) {
-      return 'Chào buổi trưa 🌤️';
+      return AppSettings.text(context, 'Chào buổi trưa 🌤️', 'Good afternoon 🌤️');
     } else if (hour >= 14 && hour < 18) {
-      return 'Chào buổi chiều ⛅';
+      return AppSettings.text(context, 'Chào buổi chiều ⛅', 'Good afternoon ⛅');
     } else {
-      return 'Chào buổi tối 🌙';
+      return AppSettings.text(context, 'Chào buổi tối 🌙', 'Good evening 🌙');
     }
   }
 
@@ -224,9 +233,10 @@ class _HomePageState extends State<HomePage> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
                         Text(
                           AppSettings.text(context, 'Dịch vụ giặt ủi', 'Laundry services'),
                           style: TextStyle(
@@ -240,8 +250,10 @@ class _HomePageState extends State<HomePage> {
                           AppSettings.text(context, 'Bảng giá niêm yết, chăm sóc tận tâm', 'Upfront pricing and careful service'),
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
-                      ],
+                        ],
+                      ),
                     ),
+                    const SizedBox(width: 12),
                     FilledButton.icon(
                       onPressed: () async {
                         final placed = await Navigator.push<bool>(
@@ -491,7 +503,8 @@ class _HomePageState extends State<HomePage> {
     return Column(
       children: [
         SizedBox(
-          height: 165,
+          height: 165 + (MediaQuery.textScalerOf(context).scale(16) - 16)
+              .clamp(0.0, double.infinity) * 6,
           child: PageView.builder(
             controller: _bannerController,
             itemCount: _promoBanners.length,
@@ -501,6 +514,9 @@ class _HomePageState extends State<HomePage> {
             itemBuilder: (context, index) {
               final b = _promoBanners[index];
               final colors = b['colors'] as List<Color>;
+              String label(String key) => AppSettings.text(
+                context, b[key] as String, b['${key}En'] as String,
+              );
 
               return Container(
                 margin: const EdgeInsets.fromLTRB(18, 14, 18, 8),
@@ -537,7 +553,7 @@ class _HomePageState extends State<HomePage> {
                               borderRadius: BorderRadius.circular(8),
                             ),
                             child: Text(
-                              b['tag'].toString(),
+                              label('tag'),
                               style: const TextStyle(
                                 color: Colors.amberAccent,
                                 fontSize: 10,
@@ -548,7 +564,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 6),
                           Text(
-                            b['title'].toString(),
+                            label('title'),
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 16,
@@ -557,7 +573,7 @@ class _HomePageState extends State<HomePage> {
                           ),
                           const SizedBox(height: 4),
                           Text(
-                            b['subtitle'].toString(),
+                            label('subtitle'),
                             style: const TextStyle(
                               color: Colors.white70,
                               fontSize: 11,
@@ -624,7 +640,7 @@ class _HomePageState extends State<HomePage> {
           final iconColor = context.isDarkTheme
               ? Color.lerp(c.$4, Colors.white, 0.38)!
               : c.$4;
-          return InkWell(
+          return Expanded(child: InkWell(
             borderRadius: BorderRadius.circular(16),
             onTap: () {
               Navigator.push(
@@ -651,6 +667,7 @@ class _HomePageState extends State<HomePage> {
                 const SizedBox(height: 6),
                 Text(
                   c.$1,
+                  textAlign: TextAlign.center,
                   style: TextStyle(
                     fontSize: 12,
                     fontWeight: FontWeight.w600,
@@ -659,7 +676,7 @@ class _HomePageState extends State<HomePage> {
                 ),
               ],
             ),
-          );
+          ));
         }).toList(),
       ),
     );

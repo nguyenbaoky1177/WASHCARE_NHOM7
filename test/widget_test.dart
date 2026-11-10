@@ -1,8 +1,47 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:washcare/core/app_colors.dart';
+import 'package:washcare/widgets/order/order_checkout_bar.dart';
 
 void main() {
+  for (final brightness in Brightness.values) {
+    for (final language in ['vi', 'en']) {
+      testWidgets('Checkout fits narrow screens in ${brightness.name}/$language',
+          (tester) async {
+        await tester.binding.setSurfaceSize(const Size(320, 640));
+        addTearDown(() => tester.binding.setSurfaceSize(null));
+        await tester.pumpWidget(
+          MaterialApp(
+            locale: Locale(language),
+            supportedLocales: const [Locale('vi'), Locale('en')],
+            localizationsDelegates: GlobalMaterialLocalizations.delegates,
+            theme: ThemeData(brightness: brightness),
+            builder: (context, child) => MediaQuery(
+              data: MediaQuery.of(context).copyWith(
+                textScaler: const TextScaler.linear(1.8),
+              ),
+              child: child!,
+            ),
+            home: Scaffold(
+              bottomNavigationBar: OrderCheckoutBar(
+                total: '1.000.000 đ',
+                submitting: false,
+                onSubmit: () {},
+              ),
+            ),
+          ),
+        );
+        await tester.pumpAndSettle();
+        expect(
+          find.text(language == 'vi' ? 'Xác nhận đặt đơn' : 'Confirm order'),
+          findsOneWidget,
+        );
+        expect(tester.takeException(), isNull);
+      });
+    }
+  }
+
   for (final brightness in Brightness.values) {
     testWidgets('Readable WashCare card colors in ${brightness.name} mode',
         (tester) async {

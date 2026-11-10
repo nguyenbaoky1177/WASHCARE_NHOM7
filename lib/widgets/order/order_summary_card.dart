@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../core/app_colors.dart';
+import '../../core/app_settings.dart';
 
 class OrderSummaryCard extends StatelessWidget {
   const OrderSummaryCard({
@@ -53,7 +54,7 @@ class OrderSummaryCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Text(
-                'Tổng thanh toán',
+                AppSettings.text(context, 'Tổng thanh toán', 'Order total'),
                 style: TextStyle(
                   fontWeight: FontWeight.bold,
                   fontSize: 16,
