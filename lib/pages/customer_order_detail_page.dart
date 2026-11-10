@@ -5,11 +5,11 @@ import 'package:supabase_flutter/supabase_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../core/app_colors.dart';
+import '../core/app_settings.dart';
 import '../core/request_timeout.dart';
 import '../core/review_service.dart';
 import '../core/supabase_client.dart';
 import '../models/models.dart';
-import '../widgets/momo_payment_dialog.dart';
 import '../widgets/order_review_dialog.dart';
 import '../widgets/order_status_badge.dart';
 
@@ -174,18 +174,6 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
       );
     } finally {
       if (mounted) setState(() => _isCancelling = false);
-    }
-  }
-
-  Future<void> _openMomoPayment() async {
-    final paid = await MomoPaymentDialog.show(
-      context: context,
-      orderId: _order.id,
-      amount: _order.totalPrice,
-    );
-
-    if (paid == true) {
-      await _reloadOrder();
     }
   }
 
@@ -641,8 +629,25 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   }
 
   Widget _buildPaymentSummaryCard() {
-    final isMomo = _order.paymentMethod == 'momo';
-    final isMomoPaid = _order.momoPaymentStatus == 'paid';
+    final isCod = _order.paymentMethod == 'cod';
+    final isMomo = ['momo', 'momo_demo'].contains(_order.paymentMethod);
+    final isPaid = isMomo && _order.momoPaymentStatus == 'paid';
+    String text(String vi, String en) => AppSettings.text(context, vi, en);
+
+    final method = switch (_order.paymentMethod) {
+      'cod' => text('Tiền mặt (COD)', 'Cash on delivery'),
+      'momo' => 'MoMo Sandbox',
+      'momo_demo' => text('MoMo mô phỏng', 'MoMo simulation'),
+      'vietqr' => 'VietQR',
+      _ => text('Phương thức cũ', 'Legacy method'),
+    };
+    final status = switch ((_order.isCancelled, isCod, isPaid, _order.isCompleted)) {
+      (_, _, true, _) => text('Đã ghi nhận thanh toán', 'Payment recorded'),
+      (true, _, _, _) => text('Đơn đã hủy', 'Order cancelled'),
+      (_, true, _, true) => text('Chưa có xác nhận thu tiền', 'Collection not recorded'),
+      (_, true, _, _) => text('Thanh toán khi nhận đồ', 'Pay on delivery'),
+      _ => text('Liên hệ hỗ trợ để kiểm tra', 'Contact support to verify'),
+    };
 
     return Card(
       elevation: 1,
@@ -658,7 +663,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 Icon(Icons.receipt_outlined, color: context.accentColor, size: 20),
                 SizedBox(width: 8),
                 Text(
-                  'Chi tiết thanh toán',
+                  text('Chi tiết thanh toán', 'Payment details'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -668,65 +673,23 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
               ],
             ),
             const Divider(height: 24),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Phương thức thanh toán',
-                    style: TextStyle(color: context.mutedColor)),
-                Row(
-                  children: [
-                    Icon(
-                      isMomo ? Icons.account_balance_wallet : Icons.money,
-                      size: 16,
-                      color: isMomo ? const Color(0xFFA50064) : Colors.green,
-                    ),
-                    const SizedBox(width: 4),
-                    Text(
-                      isMomo ? 'Ví MoMo' : 'Tiền mặt (COD)',
-                      style: const TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ],
+            _buildInfoRow(
+              icon: isCod ? Icons.payments_outlined : Icons.receipt_outlined,
+              label: text('Phương thức thanh toán', 'Payment method'),
+              value: method,
             ),
-            const SizedBox(height: 8),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('Trạng thái thanh toán',
-                    style: TextStyle(color: context.mutedColor)),
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                  decoration: BoxDecoration(
-                    color: (isMomoPaid || _order.isCompleted)
-                        ? Colors.green.withValues(alpha: 0.12)
-                        : Colors.orange.withValues(alpha: 0.12),
-                    borderRadius: BorderRadius.circular(6),
-                  ),
-                  child: Text(
-                    isMomo
-                        ? (isMomoPaid ? 'Đã thanh toán' : 'Chưa thanh toán')
-                        : (_order.isCompleted
-                            ? 'Đã thu tiền'
-                            : 'Thanh toán khi nhận đồ'),
-                    style: TextStyle(
-                      fontSize: 12,
-                      fontWeight: FontWeight.bold,
-                      color: (isMomoPaid || _order.isCompleted)
-                          ? Colors.green
-                          : Colors.orange.shade800,
-                    ),
-                  ),
-                ),
-              ],
+            const SizedBox(height: 12),
+            _buildInfoRow(
+              icon: Icons.info_outline,
+              label: text('Trạng thái thanh toán', 'Payment status'),
+              value: status,
             ),
             const Divider(height: 20),
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
                 Text(
-                  'Tổng cộng',
+                  text('Tổng cộng', 'Total'),
                   style: TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.bold,
@@ -888,59 +851,31 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   }
 
   Widget? _buildBottomActionBar() {
-    final canCancel = _order.canCancel;
-    final canPayMomo = _order.paymentMethod == 'momo' &&
-        _order.momoPaymentStatus != 'paid' &&
-        !_order.isCancelled;
-
-    if (!canCancel && !canPayMomo) return null;
+    if (!_order.canCancel) return null;
 
     return Container(
       color: context.cardSurface,
       padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
       child: SafeArea(
         top: false,
-        child: Row(
-          children: [
-            if (canCancel)
-              Expanded(
-                child: OutlinedButton.icon(
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.redAccent),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _isCancelling ? null : _cancelOrder,
-                  icon: _isCancelling
-                      ? const SizedBox(
-                          width: 16,
-                          height: 16,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.cancel_outlined, size: 18),
-                  label: Text(_isCancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
-                ),
-              ),
-            if (canCancel && canPayMomo) const SizedBox(width: 12),
-            if (canPayMomo)
-              Expanded(
-                child: FilledButton.icon(
-                  style: FilledButton.styleFrom(
-                    backgroundColor: const Color(0xFFA50064),
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                  ),
-                  onPressed: _openMomoPayment,
-                  icon: const Icon(Icons.payment, size: 18),
-                  label: const Text('Thanh toán MoMo'),
-                ),
-              ),
-          ],
+        child: OutlinedButton.icon(
+          style: OutlinedButton.styleFrom(
+            foregroundColor: Colors.red,
+            side: const BorderSide(color: Colors.redAccent),
+            padding: const EdgeInsets.symmetric(vertical: 12),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+          ),
+          onPressed: _isCancelling ? null : _cancelOrder,
+          icon: _isCancelling
+              ? const SizedBox(
+                  width: 16,
+                  height: 16,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Icon(Icons.cancel_outlined, size: 18),
+          label: Text(_isCancelling ? 'Đang hủy...' : 'Hủy đơn hàng'),
         ),
       ),
     );

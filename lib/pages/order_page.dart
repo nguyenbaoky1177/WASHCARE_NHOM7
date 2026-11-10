@@ -12,8 +12,6 @@ import '../core/app_settings.dart';
 import '../core/profile_cache.dart';
 import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
-import '../core/momo_payment_service.dart';
-import '../widgets/momo_payment_dialog.dart';
 import '../models/models.dart';
 import 'saved_addresses_page.dart';
 
@@ -38,7 +36,6 @@ class _OrderPageState extends State<OrderPage> {
 
   DateTime? _pickupTime;
   String _deliveryType = 'standard'; // 'standard' (24-48h) or 'express' (4-6h)
-  String _paymentMethod = 'cod'; // 'cod' or 'momo'
 
   double get _discountAmount =>
       _appliedVoucher == 'WASHCARE20' && _subtotal >= 50000 ? 20000 : 0;
@@ -277,12 +274,9 @@ class _OrderPageState extends State<OrderPage> {
     setState(() => _submitting = true);
 
     try {
-      if (_paymentMethod == 'momo') {
-        await MomoPaymentService.request('configuration');
-      }
       // Build structured order note with shipping, payment & voucher details
       final speedLabel = _deliveryType == 'express' ? 'HỎA TỐC 4H' : 'TIÊU CHUẨN';
-      final payLabel = _paymentMethod == 'cod' ? 'TIỀN MẶT KHI NHẬN (COD)' : 'MOMO SANDBOX';
+      const payLabel = 'TIỀN MẶT KHI NHẬN (COD)';
       final voucherLabel = _appliedVoucher != null ? ' | Voucher: $_appliedVoucher (-${_formatMoney(_discountAmount)}đ)' : '';
       final customNote = _noteController.text.trim();
       final fullNote = '[$speedLabel] [$payLabel]$voucherLabel${customNote.isNotEmpty ? ' | Ghi chú: $customNote' : ''}';
@@ -297,7 +291,7 @@ class _OrderPageState extends State<OrderPage> {
           'p_note': fullNote,
           'p_items': items,
           'p_delivery_type': _deliveryType,
-          'p_payment_method': _paymentMethod,
+          'p_payment_method': 'cod',
           'p_voucher_code': _discountAmount > 0 ? _appliedVoucher : null,
         },
       );
@@ -315,130 +309,67 @@ class _OrderPageState extends State<OrderPage> {
 
       if (!mounted) return;
 
-      if (_paymentMethod == 'momo') {
-        final openMomo = await showDialog<bool>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogCtx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 54),
-            title: const Text(
-              'Đặt dịch vụ thành công!',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Mã đơn hàng: #$orderId',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'Tổng tiền: ${_formatMoney(chargedTotal)} đ',
-                  style: TextStyle(
-                    color: context.accentColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Bạn đã chọn MoMo Sandbox. Mở trang thanh toán để thực hiện giao dịch thử nghiệm.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: context.mutedColor, fontSize: 13),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    style: FilledButton.styleFrom(
-                      backgroundColor: primaryBlue, foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                    ),
-                    onPressed: () => Navigator.pop(dialogCtx, true),
-                    icon: const Icon(Icons.account_balance_wallet_outlined),
-                    label: const Text(
-                      'Mở MoMo Sandbox',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Để sau & Theo dõi đơn'),
-              ),
-            ],
+      await showDialog<void>(
+        context: context,
+        barrierDismissible: false,
+        builder: (dialogCtx) => AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
           ),
-        );
-        if (openMomo == true && mounted) {
-          await MomoPaymentDialog.show(
-            context: context,
-            orderId: orderId,
-            amount: chargedTotal,
-          );
-        }
-      } else {
-        await showDialog<void>(
-          context: context,
-          barrierDismissible: false,
-          builder: (dialogCtx) => AlertDialog(
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(20),
-            ),
-            icon: const Icon(Icons.check_circle, color: Colors.green, size: 54),
-            title: const Text(
-              'Đặt dịch vụ thành công!',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Text(
-                  'Mã đơn hàng: #$orderId',
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                    fontSize: 16,
-                  ),
+          icon: const Icon(Icons.check_circle, color: Colors.green, size: 54),
+          title: Text(
+            AppSettings.text(context, 'Đặt dịch vụ thành công!', 'Order placed!'),
+            style: const TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                AppSettings.text(context, 'Mã đơn hàng: #$orderId', 'Order #$orderId'),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
                 ),
-                const SizedBox(height: 8),
-                Text(
+              ),
+              const SizedBox(height: 8),
+              Text(
+                AppSettings.text(
+                  context,
                   'Tổng tiền: ${_formatMoney(chargedTotal)} đ',
-                  style: TextStyle(
-                    color: context.accentColor,
-                    fontWeight: FontWeight.bold,
-                    fontSize: 18,
-                  ),
+                  'Order total: ${_formatMoney(chargedTotal)} đ',
                 ),
-                const SizedBox(height: 12),
-                Text(
+                style: TextStyle(
+                  color: context.accentColor,
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                AppSettings.text(
+                  context,
                   'Bạn sẽ thanh toán tiền mặt khi shipper giao đồ sạch.',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: context.mutedColor, fontSize: 13),
+                  'Pay in cash when your laundry is delivered.',
                 ),
-              ],
-            ),
-            actions: [
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: primaryBlue),
-                onPressed: () => Navigator.pop(dialogCtx),
-                child: const Text('Hoàn tất & Theo dõi'),
+                textAlign: TextAlign.center,
+                style: TextStyle(color: context.mutedColor, fontSize: 13),
               ),
             ],
           ),
-        );
-      }
+          actions: [
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: primaryBlue,
+                foregroundColor: Colors.white,
+              ),
+              onPressed: () => Navigator.pop(dialogCtx),
+              child: Text(
+                AppSettings.text(context, 'Hoàn tất & Theo dõi', 'Done'),
+              ),
+            ),
+          ],
+        ),
+      );
 
       if (mounted) Navigator.pop(context, true);
     } on PostgrestException catch (e) {
@@ -525,9 +456,9 @@ class _OrderPageState extends State<OrderPage> {
 
                   const SizedBox(height: 18),
 
-                  // 6. Payment Method Selector
+                  // 6. Payment method
                   SectionTitle(AppSettings.text(context, '6. Phương thức thanh toán', '6. Payment method')),
-                  _buildPaymentMethodSelector(),
+                  _buildPaymentMethod(),
 
                   const SizedBox(height: 18),
 
@@ -982,90 +913,33 @@ class _OrderPageState extends State<OrderPage> {
     );
   }
 
-  Widget _buildPaymentMethodSelector() {
-    final options = [
-      (
-        'cod',
-        AppSettings.text(context, 'Tiền mặt khi giao nhận (COD)', 'Cash on delivery (COD)'),
-        AppSettings.text(context, 'Thanh toán trực tiếp cho shipper khi nhận đồ sạch', 'Pay the driver when your laundry is delivered'),
-        Icons.payments_outlined,
+  Widget _buildPaymentMethod() {
+    return Card(
+      color: context.cardSurface,
+      margin: EdgeInsets.zero,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(16),
+        side: BorderSide(color: context.cardOutline),
       ),
-      (
-        'momo',
-        'MoMo Sandbox',
-        AppSettings.text(context, 'Thanh toán qua cổng thử nghiệm chính thức của MoMo', 'Use the official MoMo test gateway'),
-        Icons.account_balance_wallet_outlined,
+      child: ListTile(
+        leading: Icon(Icons.payments_outlined, color: context.accentColor),
+        title: Text(
+          AppSettings.text(
+            context,
+            'Tiền mặt khi nhận đồ (COD)',
+            'Cash on delivery (COD)',
+          ),
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
+        subtitle: Text(
+          AppSettings.text(
+            context,
+            'Thanh toán cho nhân viên giao hàng khi nhận đồ sạch.',
+            'Pay the driver when your laundry is delivered.',
+          ),
+          style: TextStyle(color: context.mutedColor),
+        ),
       ),
-    ];
-
-    return Column(
-      children: options.map((opt) {
-        final selected = _paymentMethod == opt.$1;
-
-        return Container(
-          margin: const EdgeInsets.only(bottom: 10),
-          decoration: BoxDecoration(
-            color: context.cardSurface,
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(
-              color: selected ? context.accentColor : context.cardOutline,
-              width: selected ? 1.5 : 1.0,
-            ),
-          ),
-          child: InkWell(
-            borderRadius: BorderRadius.circular(16),
-            onTap: () => setState(() => _paymentMethod = opt.$1),
-            child: Padding(
-              padding: const EdgeInsets.all(14),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(10),
-                    decoration: BoxDecoration(
-                      color: selected ? context.accentSurface : context.insetSurface,
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Icon(
-                      opt.$4,
-                      color: selected ? context.accentColor : Colors.blueGrey,
-                      size: 22,
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          opt.$2,
-                          style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
-                            color: selected ? context.headingColor : context.detailColor,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          opt.$3,
-                          style: TextStyle(
-                            fontSize: 12,
-                            color: context.mutedColor,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(
-                    selected ? Icons.radio_button_checked : Icons.radio_button_off,
-                    color: selected ? context.accentColor : context.mutedColor,
-                    size: 20,
-                  ),
-                ],
-              ),
-            ),
-          ),
-        );
-      }).toList(),
     );
   }
 }

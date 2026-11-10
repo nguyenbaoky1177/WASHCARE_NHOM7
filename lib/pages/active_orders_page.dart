@@ -1328,7 +1328,7 @@ class _OrderDetailPageState extends State<OrderDetailPage> {
           if (['momo', 'momo_demo'].contains(_order.paymentMethod) &&
               !_order.isCancelled) ...[
             const SizedBox(height: 14),
-            MomoPaymentCard(order: _order, onClosed: _reloadOrder),
+            MomoPaymentCard(order: _order, allowPayment: false, onClosed: _reloadOrder),
           ],
           if (_order.isCompleted) ...[
             const SizedBox(height: 14),
