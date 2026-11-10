@@ -12,6 +12,7 @@ import '../core/supabase_client.dart';
 import '../models/models.dart';
 import '../widgets/order_review_dialog.dart';
 import '../widgets/order_status_badge.dart';
+import '../core/vietqr_helper.dart';
 
 class CustomerOrderDetailPage extends StatefulWidget {
   final OrderModel order;
@@ -654,24 +655,28 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
   }
 
   Widget _buildPaymentSummaryCard() {
-    final isCod = _order.paymentMethod == 'cod';
+    final isVietQr = _order.paymentMethod == 'vietqr' || (_order.note?.contains('VIETQR') == true);
+    final isCod = _order.paymentMethod == 'cod' && !isVietQr;
     final isMomo = ['momo', 'momo_demo'].contains(_order.paymentMethod);
     final isPaid = _order.isCodCollected ||
         (isMomo && _order.momoPaymentStatus == 'paid');
     String text(String vi, String en) => AppSettings.text(context, vi, en);
 
-    final method = switch (_order.paymentMethod) {
-      'cod' => text('Tiền mặt (COD)', 'Cash on delivery'),
-      'momo' => 'MoMo Sandbox',
-      'momo_demo' => text('MoMo mô phỏng', 'MoMo simulation'),
-      'vietqr' => 'VietQR',
-      _ => text('Phương thức cũ', 'Legacy method'),
-    };
-    final status = switch ((_order.isCancelled, isCod, isPaid, _order.isCompleted)) {
-      (_, _, true, _) => text('Đã ghi nhận thanh toán', 'Payment recorded'),
-      (true, _, _, _) => text('Đơn đã hủy', 'Order cancelled'),
-      (_, true, _, true) => text('Chưa có xác nhận thu tiền', 'Collection not recorded'),
-      (_, true, _, _) => text('Thanh toán khi nhận đồ', 'Pay on delivery'),
+    final method = isVietQr
+        ? text('Chuyển khoản (VietQR)', 'Bank transfer (VietQR)')
+        : switch (_order.paymentMethod) {
+            'cod' => text('Tiền mặt (COD)', 'Cash on delivery'),
+            'momo' => 'MoMo Sandbox',
+            'momo_demo' => text('MoMo mô phỏng', 'MoMo simulation'),
+            'vietqr' => text('Chuyển khoản (VietQR)', 'Bank transfer (VietQR)'),
+            _ => text('Phương thức cũ', 'Legacy method'),
+          };
+    final status = switch ((_order.isCancelled, isVietQr, isCod, isPaid, _order.isCompleted)) {
+      (_, _, _, true, _) => text('Đã ghi nhận thanh toán', 'Payment recorded'),
+      (true, _, _, _, _) => text('Đơn đã hủy', 'Order cancelled'),
+      (_, true, _, _, _) => text('Chờ chuyển khoản VietQR', 'Awaiting VietQR transfer'),
+      (_, _, true, _, true) => text('Chưa có xác nhận thu tiền', 'Collection not recorded'),
+      (_, _, true, _, _) => text('Thanh toán khi nhận đồ', 'Pay on delivery'),
       _ => text('Liên hệ hỗ trợ để kiểm tra', 'Contact support to verify'),
     };
 
@@ -732,6 +737,32 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
                 ),
               ],
             ),
+            if (isVietQr && !isPaid && !_order.isCancelled) ...[
+              const SizedBox(height: 14),
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.accentColor,
+                    side: BorderSide(color: context.accentColor),
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.qr_code_2, size: 20),
+                  label: Text(
+                    text('Xem mã QR thanh toán (VietQR)', 'View VietQR payment code'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    VietQrHelper.showPaymentDialog(
+                      context: context,
+                      orderId: _order.id,
+                      amount: _order.totalPrice,
+                    );
+                  },
+                ),
+              ),
+            ],
           ],
         ),
       ),

@@ -12,6 +12,7 @@ import '../core/app_settings.dart';
 import '../core/profile_cache.dart';
 import '../core/service_cache.dart';
 import '../core/supabase_client.dart';
+import '../core/vietqr_helper.dart';
 import '../models/models.dart';
 import 'saved_addresses_page.dart';
 
@@ -36,6 +37,7 @@ class _OrderPageState extends State<OrderPage> {
 
   DateTime? _pickupTime;
   String _deliveryType = 'standard'; // 'standard' (24-48h) or 'express' (4-6h)
+  String _paymentMethod = 'cod'; // 'cod' or 'vietqr'
 
   double get _discountAmount =>
       _appliedVoucher == 'WASHCARE20' && _subtotal >= 50000 ? 20000 : 0;
@@ -276,12 +278,14 @@ class _OrderPageState extends State<OrderPage> {
     try {
       // Build structured order note with shipping, payment & voucher details
       final speedLabel = _deliveryType == 'express' ? 'HỎA TỐC 4H' : 'TIÊU CHUẨN';
-      const payLabel = 'TIỀN MẶT KHI NHẬN (COD)';
+      final payLabel = _paymentMethod == 'vietqr' ? 'CHUYỂN KHOẢN (VIETQR)' : 'TIỀN MẶT KHI NHẬN (COD)';
       final voucherLabel = _appliedVoucher != null ? ' | Voucher: $_appliedVoucher (-${_formatMoney(_discountAmount)}đ)' : '';
       final customNote = _noteController.text.trim();
       final fullNote = '[$speedLabel] [$payLabel]$voucherLabel${customNote.isNotEmpty ? ' | Ghi chú: $customNote' : ''}';
 
-      final createdOrder = await supabase.rpc(
+      dynamic createdOrder;
+      try {
+        createdOrder = await supabase.rpc(
         'create_order_v2',
         params: {
           'p_customer_name': _nameController.text.trim(),
@@ -291,10 +295,31 @@ class _OrderPageState extends State<OrderPage> {
           'p_note': fullNote,
           'p_items': items,
           'p_delivery_type': _deliveryType,
-          'p_payment_method': 'cod',
+          'p_payment_method': _paymentMethod,
           'p_voucher_code': _discountAmount > 0 ? _appliedVoucher : null,
         },
       );
+
+      } on PostgrestException catch (e) {
+        if (_paymentMethod == 'vietqr' && e.message.contains('hợp lệ')) {
+          createdOrder = await supabase.rpc(
+            'create_order_v2',
+            params: {
+              'p_customer_name': _nameController.text.trim(),
+              'p_phone': _phoneController.text.trim(),
+              'p_address': _addressController.text.trim(),
+              'p_pickup_time': _pickupTime!.toUtc().toIso8601String(),
+              'p_note': fullNote,
+              'p_items': items,
+              'p_delivery_type': _deliveryType,
+              'p_payment_method': 'cod',
+              'p_voucher_code': _discountAmount > 0 ? _appliedVoucher : null,
+            },
+          );
+        } else {
+          rethrow;
+        }
+      }
 
       final orderId = (createdOrder['id'] as num).toInt();
       final chargedTotal = (createdOrder['total_price'] as num).toDouble();
@@ -348,12 +373,35 @@ class _OrderPageState extends State<OrderPage> {
               Text(
                 AppSettings.text(
                   context,
-                  'Bạn sẽ thanh toán tiền mặt khi shipper giao đồ sạch.',
-                  'Pay in cash when your laundry is delivered.',
+                  _paymentMethod == 'vietqr' ? 'Bạn đã chọn Chuyển khoản VietQR. Hãy quét mã QR để chuyển khoản.' : 'Bạn sẽ thanh toán tiền mặt khi shipper giao đồ sạch.',
+                  _paymentMethod == 'vietqr' ? 'You selected VietQR transfer. Please scan the QR code to complete payment.' : 'Pay in cash when your laundry is delivered.',
                 ),
                 textAlign: TextAlign.center,
                 style: TextStyle(color: context.mutedColor, fontSize: 13),
               ),
+              if (_paymentMethod == 'vietqr') ...[
+                const SizedBox(height: 14),
+                OutlinedButton.icon(
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: context.accentColor,
+                    side: BorderSide(color: context.accentColor),
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  ),
+                  icon: const Icon(Icons.qr_code_2, size: 20),
+                  label: Text(
+                    AppSettings.text(context, 'Xem mã VietQR ngay', 'View VietQR Code'),
+                    style: const TextStyle(fontWeight: FontWeight.bold),
+                  ),
+                  onPressed: () {
+                    VietQrHelper.showPaymentDialog(
+                      context: context,
+                      orderId: orderId,
+                      amount: chargedTotal,
+                    );
+                  },
+                ),
+              ],
             ],
           ),
           actions: [
@@ -914,32 +962,89 @@ class _OrderPageState extends State<OrderPage> {
   }
 
   Widget _buildPaymentMethod() {
-    return Card(
-      color: context.cardSurface,
-      margin: EdgeInsets.zero,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(16),
-        side: BorderSide(color: context.cardOutline),
+    final options = [
+      (
+        'cod',
+        AppSettings.text(context, 'Tiền mặt khi nhận đồ (COD)', 'Cash on delivery (COD)'),
+        AppSettings.text(context, 'Thanh toán trực tiếp cho shipper khi nhận đồ sạch.', 'Pay the driver when your laundry is delivered.'),
+        Icons.payments_outlined,
       ),
-      child: ListTile(
-        leading: Icon(Icons.payments_outlined, color: context.accentColor),
-        title: Text(
-          AppSettings.text(
-            context,
-            'Tiền mặt khi nhận đồ (COD)',
-            'Cash on delivery (COD)',
-          ),
-          style: const TextStyle(fontWeight: FontWeight.bold),
-        ),
-        subtitle: Text(
-          AppSettings.text(
-            context,
-            'Thanh toán cho nhân viên giao hàng khi nhận đồ sạch.',
-            'Pay the driver when your laundry is delivered.',
-          ),
-          style: TextStyle(color: context.mutedColor),
-        ),
+      (
+        'vietqr',
+        AppSettings.text(context, 'Chuyển khoản ngân hàng (VietQR)', 'Bank Transfer (VietQR)'),
+        AppSettings.text(context, 'Quét mã VietQR qua app ngân hàng bất kỳ để tự động điền.', 'Scan VietQR code with any banking app to pay.'),
+        Icons.qr_code_2,
       ),
+    ];
+
+    return Column(
+      children: options.map((opt) {
+        final selected = _paymentMethod == opt.$1;
+
+        return Container(
+          margin: const EdgeInsets.only(bottom: 10),
+          decoration: BoxDecoration(
+            color: context.cardSurface,
+            borderRadius: BorderRadius.circular(16),
+            border: Border.all(
+              color: selected ? context.accentColor : context.cardOutline,
+              width: selected ? 1.5 : 1.0,
+            ),
+          ),
+          child: InkWell(
+            borderRadius: BorderRadius.circular(16),
+            onTap: () => setState(() => _paymentMethod = opt.$1),
+            child: Padding(
+              padding: const EdgeInsets.all(14),
+              child: Row(
+                children: [
+                  Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: selected ? context.accentSurface : context.insetSurface,
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Icon(
+                      opt.$4,
+                      color: selected ? context.accentColor : Colors.blueGrey,
+                      size: 22,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          opt.$2,
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 14,
+                            color: selected ? context.headingColor : context.detailColor,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          opt.$3,
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: context.mutedColor,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  Icon(
+                    selected ? Icons.radio_button_checked : Icons.radio_button_off,
+                    color: selected ? context.accentColor : context.mutedColor,
+                    size: 20,
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }

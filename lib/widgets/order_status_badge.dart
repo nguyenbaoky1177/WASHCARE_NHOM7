@@ -1,3 +1,4 @@
+import '../core/app_settings.dart';
 import 'package:flutter/material.dart';
 
 import '../core/app_colors.dart';
@@ -27,8 +28,18 @@ class OrderStatusBadge extends StatelessWidget {
         ? Color.lerp(order.statusColor, Colors.white, 0.45)!
         : order.statusColor;
     final label = Text(
-      order.statusLabel(
-        english: Localizations.localeOf(context).languageCode == 'en',
+      AppSettings.text(
+        context,
+        order.statusDisplayName,
+        switch (order.status) {
+          'pending' => 'Awaiting confirmation',
+          'confirmed' => 'Confirmed',
+          'washing' => 'Washing',
+          'delivering' => 'Out for delivery',
+          'completed' => 'Completed',
+          'cancelled' => 'Cancelled',
+          _ => order.status,
+        },
       ),
       style: TextStyle(
         color: color,

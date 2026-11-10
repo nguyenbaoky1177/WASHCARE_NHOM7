@@ -690,6 +690,24 @@ class _AccountPageState extends State<AccountPage> {
     );
   }
 
+    String _displayName(ProfileModel? p, bool english) {
+    if (p == null) return AppSettings.text(context, 'Tài khoản', 'Account');
+    final name = p.fullName.trim();
+    if (name.isNotEmpty) return name;
+    return _roleLabel(p, english);
+  }
+
+  String _roleLabel(ProfileModel p, bool english) {
+    switch (p.role.toLowerCase()) {
+      case 'admin':
+        return english ? 'Administrator' : 'Quản trị viên';
+      case 'staff':
+        return english ? 'Staff' : 'Nhân viên';
+      default:
+        return english ? 'Customer' : 'Khách hàng';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final english = Localizations.localeOf(context).languageCode == 'en';
@@ -744,8 +762,7 @@ class _AccountPageState extends State<AccountPage> {
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                profile?.displayName(english: english) ??
-                                    AppSettings.text(context, 'Tài khoản', 'Account'),
+                                _displayName(profile, english),
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 20,
@@ -773,7 +790,7 @@ class _AccountPageState extends State<AccountPage> {
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                   child: Text(
-                                    profile.roleLabel(english: english),
+                                    _roleLabel(profile, english),
                                     style: const TextStyle(
                                       color: Colors.white,
                                       fontSize: 12,

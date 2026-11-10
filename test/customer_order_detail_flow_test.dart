@@ -71,4 +71,32 @@ void main() {
     expect(find.text('Collection not recorded'), findsNothing);
     await closeOrder(tester);
   });
+
+  testWidgets('customer sees VietQR method and can view payment code dialog', (
+    tester,
+  ) async {
+    await openOrder(
+      tester,
+      OrderModel.fromJson({
+        'id': 3,
+        'user_id': 'detail-test-customer',
+        'status': 'pending',
+        'payment_method': 'vietqr',
+        'total_price': 120000,
+      }),
+    );
+    expect(find.text('Bank transfer (VietQR)'), findsOneWidget);
+    expect(find.text('Awaiting VietQR transfer'), findsOneWidget);
+    expect(find.text('View VietQR payment code'), findsOneWidget);
+
+    await tester.tap(find.text('View VietQR payment code'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('VietQR Payment'), findsOneWidget);
+    expect(find.text('TIEM GIAT SAY WASHCARE'), findsOneWidget);
+    await tester.tap(find.text('I have completed the transfer'));
+    await tester.pumpAndSettle();
+
+    await closeOrder(tester);
+  });
 }

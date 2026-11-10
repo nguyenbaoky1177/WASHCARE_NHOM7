@@ -60,6 +60,7 @@ void main() {
   testWidgets('customer books a COD order through the checkout UI', (
     tester,
   ) async {
+    submissions.clear();
     await tester.binding.setSurfaceSize(const Size(800, 1800));
     addTearDown(() => tester.binding.setSurfaceSize(null));
     await tester.pumpWidget(const MaterialApp(home: OrderPage()));
@@ -92,6 +93,43 @@ void main() {
       DateTime.parse(order['p_pickup_time'] as String).isAfter(DateTime.now()),
       isTrue,
     );
+    expect(tester.takeException(), isNull);
+  });
+
+  testWidgets('customer selects VietQR and books order with VietQR payment method', (
+    tester,
+  ) async {
+    submissions.clear();
+    await tester.binding.setSurfaceSize(const Size(800, 1800));
+    addTearDown(() => tester.binding.setSurfaceSize(null));
+    await tester.pumpWidget(const MaterialApp(home: OrderPage()));
+    await tester.pumpAndSettle();
+
+    await tester.tap(find.byIcon(Icons.add).first);
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Change'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('OK'));
+    await tester.pumpAndSettle();
+
+    // Select VietQR payment method
+    await tester.tap(find.byIcon(Icons.qr_code_2).first);
+    await tester.pumpAndSettle();
+
+    final contactFields = find.byType(TextFormField);
+    await tester.enterText(contactFields.at(2), '84 Nguyen Trai');
+    await tester.pumpAndSettle();
+    await tester.tap(find.text('Confirm order'));
+    await tester.pump(const Duration(seconds: 1));
+
+    expect(submissions, hasLength(1));
+    expect(find.text('Order placed!'), findsOneWidget);
+    expect(find.text('View VietQR Code'), findsOneWidget);
+    final order = submissions.single;
+    expect(order['p_payment_method'], 'vietqr');
+    expect(order['p_note'], contains('CHUYỂN KHOẢN (VIETQR)'));
     expect(tester.takeException(), isNull);
   });
 }

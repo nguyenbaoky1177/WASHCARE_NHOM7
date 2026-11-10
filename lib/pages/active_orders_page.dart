@@ -485,8 +485,18 @@ class _ActiveOrdersPageState extends State<ActiveOrdersPage> {
                           const SizedBox(width: 4),
                           Flexible(
                             child: Text(
-                              order.statusLabel(
-                                english: Localizations.localeOf(context).languageCode == 'en',
+                              AppSettings.text(
+                                context,
+                                order.statusDisplayName,
+                                switch (order.status) {
+                                  'pending' => 'Awaiting confirmation',
+                                  'confirmed' => 'Confirmed',
+                                  'washing' => 'Washing',
+                                  'delivering' => 'Out for delivery',
+                                  'completed' => 'Completed',
+                                  'cancelled' => 'Cancelled',
+                                  _ => order.status,
+                                },
                               ),
                               style: TextStyle(
                                 color: color,

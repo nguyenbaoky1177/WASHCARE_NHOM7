@@ -328,9 +328,15 @@ class _HomePageState extends State<HomePage> {
             child: FutureBuilder<ProfileModel?>(
               future: _profileFuture,
               builder: (context, snapshot) {
-                final name = snapshot.data?.displayName(
-                  english: Localizations.localeOf(context).languageCode == 'en',
-                ) ?? 'WashCare';
+                final isEnglish = Localizations.localeOf(context).languageCode == 'en';
+                final profile = snapshot.data;
+                final name = (profile != null && profile.fullName.trim().isNotEmpty)
+                    ? profile.fullName.trim()
+                    : (profile != null
+                        ? (profile.role.toLowerCase() == 'admin'
+                            ? (isEnglish ? 'Administrator' : 'Quản trị viên')
+                            : (isEnglish ? 'Customer' : 'Khách hàng'))
+                        : 'WashCare');
 
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
