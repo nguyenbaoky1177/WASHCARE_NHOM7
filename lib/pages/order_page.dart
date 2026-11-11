@@ -1,6 +1,5 @@
 import '../core/account_storage.dart';
 import '../core/address_service.dart';
-import '../core/request_timeout.dart';
 import 'package:flutter/material.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
@@ -11,7 +10,7 @@ import '../core/app_colors.dart';
 import '../core/app_settings.dart';
 import '../core/profile_cache.dart';
 import '../core/service_cache.dart';
-import '../core/supabase_client.dart';
+import '../core/order_service.dart';
 import '../core/vietqr_helper.dart';
 import '../models/models.dart';
 import 'saved_addresses_page.dart';
@@ -166,8 +165,7 @@ class _OrderPageState extends State<OrderPage> {
       }
       setState(() => _checkingVoucher = true);
       try {
-        final eligible = await supabase.rpc('is_first_order_eligible')
-            .timeout(supabaseRequestTimeout);
+        final eligible = await OrderService.isFirstOrderEligible();
         if (!mounted) return;
         if (eligible != true) {
           setState(() => _appliedVoucher = null);
@@ -283,46 +281,17 @@ class _OrderPageState extends State<OrderPage> {
       final customNote = _noteController.text.trim();
       final fullNote = '[$speedLabel] [$payLabel]$voucherLabel${customNote.isNotEmpty ? ' | Ghi chú: $customNote' : ''}';
 
-      dynamic createdOrder;
-      try {
-        createdOrder = await supabase.rpc(
-        'create_order_v2',
-        params: {
-          'p_customer_name': _nameController.text.trim(),
-          'p_phone': _phoneController.text.trim(),
-          'p_address': _addressController.text.trim(),
-          'p_pickup_time': _pickupTime!.toUtc().toIso8601String(),
-          'p_note': fullNote,
-          'p_items': items,
-          'p_delivery_type': _deliveryType,
-          'p_payment_method': _paymentMethod,
-          'p_voucher_code': _discountAmount > 0 ? _appliedVoucher : null,
-        },
+      final (orderId, chargedTotal) = await OrderService.createOrder(
+        customerName: _nameController.text.trim(),
+        phone: _phoneController.text.trim(),
+        address: _addressController.text.trim(),
+        pickupTime: _pickupTime!,
+        note: fullNote,
+        items: items,
+        deliveryType: _deliveryType,
+        paymentMethod: _paymentMethod,
+        voucherCode: _discountAmount > 0 ? _appliedVoucher : null,
       );
-
-      } on PostgrestException catch (e) {
-        if (_paymentMethod == 'vietqr' && e.message.contains('hợp lệ')) {
-          createdOrder = await supabase.rpc(
-            'create_order_v2',
-            params: {
-              'p_customer_name': _nameController.text.trim(),
-              'p_phone': _phoneController.text.trim(),
-              'p_address': _addressController.text.trim(),
-              'p_pickup_time': _pickupTime!.toUtc().toIso8601String(),
-              'p_note': fullNote,
-              'p_items': items,
-              'p_delivery_type': _deliveryType,
-              'p_payment_method': 'cod',
-              'p_voucher_code': _discountAmount > 0 ? _appliedVoucher : null,
-            },
-          );
-        } else {
-          rethrow;
-        }
-      }
-
-      final orderId = (createdOrder['id'] as num).toInt();
-      final chargedTotal = (createdOrder['total_price'] as num).toDouble();
 
       try {
         await _addressStorage?.writeString(

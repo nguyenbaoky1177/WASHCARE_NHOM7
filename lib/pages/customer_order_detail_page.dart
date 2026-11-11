@@ -666,8 +666,7 @@ class _CustomerOrderDetailPageState extends State<CustomerOrderDetailPage> {
         ? text('Chuyển khoản (VietQR)', 'Bank transfer (VietQR)')
         : switch (_order.paymentMethod) {
             'cod' => text('Tiền mặt (COD)', 'Cash on delivery'),
-            'momo' => 'MoMo Sandbox',
-            'momo_demo' => text('MoMo mô phỏng', 'MoMo simulation'),
+            'momo' || 'momo_demo' => text('MoMo (đơn cũ)', 'MoMo (legacy order)'),
             'vietqr' => text('Chuyển khoản (VietQR)', 'Bank transfer (VietQR)'),
             _ => text('Phương thức cũ', 'Legacy method'),
           };

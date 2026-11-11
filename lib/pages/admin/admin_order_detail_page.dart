@@ -7,7 +7,6 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../widgets/order_status_badge.dart';
 import '../../core/app_colors.dart';
 import '../../core/supabase_client.dart';
-import '../../widgets/momo_payment_card.dart';
 import '../../models/models.dart';
 
 class AdminOrderDetailPage extends StatefulWidget {
@@ -659,7 +658,12 @@ class _AdminOrderDetailPageState extends State<AdminOrderDetailPage> {
                   if (['momo', 'momo_demo'].contains(_order.paymentMethod) &&
                       !_order.isCancelled) ...[
                     const SizedBox(height: 16),
-                    MomoPaymentCard(order: _order, allowPayment: false),
+                    Text(switch (_order.momoPaymentStatus) {
+                      'paid' => 'MoMo (đơn cũ) · Đã ghi nhận thanh toán',
+                      'pending' => 'MoMo (đơn cũ) · Đang chờ thanh toán',
+                      'review_required' => 'MoMo (đơn cũ) · Cần đối soát',
+                      _ => 'MoMo (đơn cũ) · Chưa ghi nhận thanh toán',
+                    }),
                   ],
                 ],
               ),

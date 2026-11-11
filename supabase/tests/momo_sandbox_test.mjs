@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
 import test, { before, after } from "node:test";
 import assert from "node:assert/strict";
 
-// Install the test runtime using the command documented in MOMO_SANDBOX.md.
+// Install the test runtime using the command in the root README.
 const require = createRequire(new URL("../../.dart_tool/momo-sql-check/package.json", import.meta.url));
 const { PGlite } = require("@electric-sql/pglite");
 const db = new PGlite();
